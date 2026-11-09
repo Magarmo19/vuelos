@@ -1,0 +1,8 @@
+{
+  "etiqueta": "Judit",
+  "asignaciones": [
+    { "matricula": "9H-ILV", "hex": "4d210e", "desde": "2026-11-10", "hasta": null, "nota": "Primer avión en VistaJet" }
+  ],
+  "incluir_vuelos": [],
+  "excluir_vuelos": []
+}

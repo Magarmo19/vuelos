@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#070a14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vuelos">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Vuelos</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root{
+    --bg:#070a14; --card:#10162a; --card2:#161e36; --line:#222b47;
+    --text:#eef1fa; --muted:#8a93ad; --dim:#59627e;
+    --accent:#4f9dff; --accent2:#7cc4ff; --her:#ffd166; --green:#3ad29f; --amber:#ffb547; --red:#ff6b6b;
+    --r:20px; --tab:64px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--bg);color:var(--text);font:15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  body{padding:calc(env(safe-area-inset-top) + 12px) 14px calc(env(safe-area-inset-bottom) + var(--tab) + 24px)}
+  button,input,select{font:inherit;color:inherit}
+  .wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+  header{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 0}
+  h1{font-size:25px;font-weight:760;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;margin-right:10px}
+  .chip{font-size:12px;color:var(--muted);background:var(--card);border:1px solid var(--line);padding:5px 10px;border-radius:99px;white-space:nowrap}
+  .chip .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--dim);margin-right:6px;vertical-align:1px}
+  .chip.live .dot{background:var(--green);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(58,210,159,.55)}70%{box-shadow:0 0 0 9px rgba(58,210,159,0)}100%{box-shadow:0 0 0 0 rgba(58,210,159,0)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+  h2{font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:650;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+  h2 a,h2 button{font-size:13px;text-transform:none;letter-spacing:0;color:var(--accent2);background:none;border:0;text-decoration:none;cursor:pointer;font-weight:600}
+  [hidden]{display:none!important}
+
+  /* hero */
+  .hero{background:radial-gradient(120% 120% at 0% 0%,#22305e 0%,#121a33 45%,#10162a 100%);border-color:#2a3660}
+  .who{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .state{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+  .state.air{color:var(--green)} .state.ground{color:var(--accent2)} .state.unknown{color:var(--amber)}
+  .plane-tag{font-size:12px;color:var(--her);background:rgba(255,209,102,.1);border:1px solid rgba(255,209,102,.25);padding:3px 9px;border-radius:99px;font-weight:600;white-space:nowrap}
+  .route{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin:14px 0 4px;gap:8px}
+  .code{font-size:46px;font-weight:820;letter-spacing:-.035em;line-height:1}
+  .city{color:var(--muted);font-size:13px;margin-top:5px;min-height:18px}
+  .route .end{text-align:right}
+  .mid{display:flex;flex-direction:column;align-items:center;color:var(--dim);font-size:11.5px;min-width:76px;gap:2px}
+  .mid svg{width:64px;height:24px}
+  .facts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+  .fact{background:rgba(255,255,255,.045);border-radius:14px;padding:10px 12px}
+  .fact b{display:block;font-size:16px;font-weight:720;white-space:nowrap}
+  .fact span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .sub{color:var(--muted);font-size:13.5px;margin-top:12px}
+  .noassign{color:var(--muted);font-size:14.5px;line-height:1.5}
+  .noassign b{color:var(--text)}
+
+  /* map */
+  #mapBox{position:relative}
+  #map{height:340px;border-radius:var(--r);border:1px solid var(--line);overflow:hidden;background:#0b1020}
+  .map-btns{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;z-index:500}
+  .map-btns button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:rgba(16,22,42,.9);font-size:16px;cursor:pointer}
+  .leaflet-container{background:#0b1020;font:inherit}
+  .dark-tiles{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.35)}
+  .leaflet-control-attribution{background:rgba(7,10,20,.7)!important;color:var(--dim)!important;font-size:9px}
+  .leaflet-control-attribution a{color:var(--muted)!important}
+  .pl{transition:transform .3s}
+  .pl.her{filter:drop-shadow(0 0 7px rgba(255,209,102,.9))}
+  .ap-dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);border:2px solid #0b1020}
+  .gd{width:7px;height:7px;border-radius:50%;background:#59627e;border:1.5px solid #0b1020}
+  .gd.her{width:12px;height:12px;background:var(--her);box-shadow:0 0 0 4px rgba(255,209,102,.25)}
+  .tip{background:#10162a;color:var(--text);border:1px solid var(--line);border-radius:8px;font-weight:650;box-shadow:none;padding:2px 7px;font-size:11.5px}
+  .tip.her{border-color:var(--her);color:var(--her)}
+  .tip:before{display:none}
+
+  /* stats */
+  .seg{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto}
+  .seg button{font-size:13px;color:var(--muted);background:var(--card2);border:1px solid transparent;border-radius:99px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+  .seg button.on{color:var(--text);border-color:var(--accent)}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .stat{background:var(--card2);border-radius:14px;padding:12px}
+  .stat b{font-size:22px;font-weight:760;display:block;letter-spacing:-.02em}
+  .stat b.sm{font-size:16px;padding:4px 0}
+  .stat span{font-size:12px;color:var(--muted)}
+  .pills{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px}
+  .pills span{font-size:12.5px;background:var(--card2);border-radius:99px;padding:4px 10px;color:var(--muted)}
+  .pills span b{color:var(--text);font-weight:650}
+
+  /* listas */
+  .month{font-size:11.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin:16px 4px 4px}
+  .month:first-child{margin-top:0}
+  .fl{display:grid;grid-template-columns:50px 1fr auto;gap:12px;align-items:center;padding:11px 4px;border-top:1px solid var(--line);cursor:pointer}
+  .month + .fl{border-top:0}
+  .fl .d{text-align:center;background:var(--card2);border-radius:12px;padding:6px 0}
+  .fl .d b{display:block;font-size:18px;line-height:1.1}
+  .fl .d span{font-size:10.5px;color:var(--muted);text-transform:uppercase}
+  .fl .r{font-weight:720;font-size:16px;min-width:0}
+  .fl .r small{font-weight:500;color:var(--muted);font-size:12.5px;display:block;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fl .t{text-align:right;font-size:12.5px;color:var(--muted);white-space:nowrap}
+  .fl .t b{color:var(--text);font-weight:620;display:block;font-size:13.5px}
+  .fl.sel{background:rgba(79,157,255,.09);border-radius:12px}
+  .tag{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:6px;background:rgba(255,181,71,.15);color:var(--amber);margin-left:6px;vertical-align:2px;font-weight:650}
+  .tag.live{background:rgba(58,210,159,.15);color:var(--green)}
+  .tag.her{background:rgba(255,209,102,.14);color:var(--her)}
+  .empty{color:var(--muted);text-align:center;padding:16px 0;font-size:14px}
+  .more{display:block;margin:10px auto 0;background:none;border:0;color:var(--accent2);font-weight:600;cursor:pointer}
+
+  /* flota */
+  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .search{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px;outline:none}
+  .search:focus{border-color:var(--accent)}
+  .ac{display:grid;grid-template-columns:38px 1fr auto;gap:12px;align-items:center;padding:11px 2px;border-top:1px solid var(--line);cursor:pointer}
+  .ac:first-child{border-top:0}
+  .ac .ic{width:38px;height:38px;border-radius:12px;background:var(--card2);display:grid;place-items:center;font-size:17px}
+  .ac .ic.air{background:rgba(58,210,159,.12)}
+  .ac .ic.her{background:rgba(255,209,102,.15);box-shadow:inset 0 0 0 1px rgba(255,209,102,.4)}
+  .ac .n{font-weight:720}
+  .ac .n small{font-weight:500;color:var(--muted);font-size:12.5px;margin-left:6px}
+  .ac .s{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ac .x{text-align:right;font-size:12.5px;color:var(--muted);white-space:nowrap}
+  .ac .x b{display:block;color:var(--text);font-weight:620}
+
+  /* botones */
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;font-weight:680;font-size:15.5px;color:#fff;background:var(--accent);border:0;border-radius:14px;padding:13px;text-decoration:none;cursor:pointer}
+  .btn.her{background:var(--her);color:#1d1606}
+  .btn.ghost{background:var(--card2);color:var(--text);font-weight:600;font-size:14.5px}
+  .btn.danger{background:rgba(255,107,107,.12);color:var(--red);font-size:14px}
+  .btn:disabled{opacity:.5}
+  .row{display:flex;gap:8px;margin-top:8px}
+  .row > *{flex:1}
+  .note{color:var(--muted);font-size:13.5px;margin-bottom:12px;line-height:1.5}
+  .note code{font:12px ui-monospace,Menlo,monospace;background:var(--card2);padding:1px 5px;border-radius:5px}
+  .url{font:12px ui-monospace,Menlo,monospace;color:var(--muted);word-break:break-all;background:var(--card2);padding:8px 10px;border-radius:10px;margin-top:8px}
+  .links{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .links a{font-size:13px;text-align:center;color:var(--text);text-decoration:none;background:var(--card2);border-radius:12px;padding:10px 6px}
+
+  /* asignaciones */
+  .as{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:12px 2px;border-top:1px solid var(--line)}
+  .as:first-child{border-top:0}
+  .as b{font-weight:720}
+  .as small{display:block;color:var(--muted);font-size:12.5px}
+  .as.now b:after{content:"ACTUAL";font-size:10px;margin-left:8px;padding:1px 6px;border-radius:6px;background:rgba(255,209,102,.15);color:var(--her);vertical-align:2px}
+  .as button{background:var(--card2);border:0;border-radius:10px;padding:7px 11px;font-size:13px;cursor:pointer}
+  label{display:block;font-size:12.5px;color:var(--muted);margin:10px 0 4px}
+  .inp{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;outline:none;-webkit-appearance:none}
+  .inp:focus{border-color:var(--accent)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ok{color:var(--green)} .bad{color:var(--red)}
+
+  /* hoja inferior */
+  .sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
+  .sheet-bg.on{opacity:1;pointer-events:auto}
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:1001;background:#0f1528;border-top:1px solid var(--line);border-radius:22px 22px 0 0;
+         padding:10px 18px calc(env(safe-area-inset-bottom) + 18px);max-height:86vh;overflow-y:auto;transform:translateY(105%);transition:transform .25s ease;max-width:760px;margin:0 auto}
+  .sheet.on{transform:none}
+  .grab{width:40px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 12px}
+  .sheet h3{font-size:24px;font-weight:780;letter-spacing:-.02em}
+  .sheet .meta{color:var(--muted);font-size:13.5px;margin:2px 0 14px}
+
+  /* barra de pestañas */
+  nav{position:fixed;left:0;right:0;bottom:0;z-index:900;background:rgba(9,13,26,.88);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+      border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);display:flex;justify-content:center}
+  nav .in{display:grid;grid-template-columns:repeat(3,1fr);width:100%;max-width:520px;height:var(--tab)}
+  nav button{background:none;border:0;color:var(--dim);font-size:11px;font-weight:600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer}
+  nav button i{font-style:normal;font-size:21px;filter:grayscale(1) brightness(.8)}
+  nav button.on{color:var(--text)}
+  nav button.on i{filter:none}
+  .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + var(--tab) + 14px);transform:translateX(-50%) translateY(20px);background:#1d2645;border:1px solid var(--line);
+         padding:10px 16px;border-radius:12px;font-size:14px;z-index:1100;opacity:0;transition:all .25s;pointer-events:none;max-width:90vw;text-align:center}
+  .toast.on{opacity:1;transform:translateX(-50%)}
+  footer{color:var(--dim);font-size:11.5px;text-align:center;padding:4px 10px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="title">Vuelos</h1>
+    <div class="chip" id="chip"><span class="dot"></span><span id="chipTxt">Cargando…</span></div>
+  </header>
+
+  <!-- ===================== ELLA ===================== -->
+  <section class="card hero" data-view="ella" id="hero">
+    <div class="who"><div class="state" id="state">—</div><div class="plane-tag" id="planeTag" hidden></div></div>
+    <div id="heroBody">
+      <div class="route">
+        <div><div class="code" id="from">—</div><div class="city" id="fromCity"></div></div>
+        <div class="mid">
+          <svg viewBox="0 0 64 24" fill="none"><path d="M2 18 Q32 -4 62 18" stroke="#3a4567" stroke-width="1.5" stroke-dasharray="3 4"/><path d="M29 6l6 3-6 3 1.5-3z" fill="#ffd166"/></svg>
+          <span id="midTxt"></span>
+        </div>
+        <div class="end"><div class="code" id="to">—</div><div class="city" id="toCity"></div></div>
+      </div>
+      <div class="facts" id="facts" hidden>
+        <div class="fact"><b id="fAlt">—</b><span>Altitud</span></div>
+        <div class="fact"><b id="fGs">—</b><span>Velocidad</span></div>
+        <div class="fact"><b id="fTime">—</b><span>En el aire</span></div>
+      </div>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div class="noassign" id="noAssign" hidden></div>
+  </section>
+
+  <!-- ===================== FLOTA (resumen) ===================== -->
+  <section class="summary" data-view="flota" hidden>
+    <div class="stat"><b id="nAir">0</b><span>en vuelo</span></div>
+    <div class="stat"><b id="nGround">0</b><span>en tierra</span></div>
+    <div class="stat"><b id="nAll">0</b><span>aviones vistos</span></div>
+  </section>
+
+  <div id="mapBox" data-view="ella flota">
+    <div id="map"></div>
+    <div class="map-btns">
+      <button type="button" id="btnFit" title="Centrar">◎</button>
+      <button type="button" id="btnGround" title="Mostrar aviones en tierra" data-view="flota">●</button>
+    </div>
+  </div>
+
+  <!-- ===================== ELLA (resto) ===================== -->
+  <section class="card" data-view="ella">
+    <h2>Estadísticas</h2>
+    <div class="seg" id="range">
+      <button data-r="month" class="on">Este mes</button>
+      <button data-r="year">Este año</button>
+      <button data-r="all">Todo</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="sF">0</b><span>vuelos</span></div>
+      <div class="stat"><b id="sH">0 h</b><span>en el aire</span></div>
+      <div class="stat"><b id="sK">0</b><span>km</span></div>
+      <div class="stat"><b id="sA">0</b><span>aeropuertos</span></div>
+      <div class="stat"><b id="sC">0</b><span>países</span></div>
+      <div class="stat"><b id="sL" class="sm">—</b><span>vuelo más largo</span></div>
+    </div>
+    <div class="pills" id="pills"></div>
+  </section>
+
+  <section class="card" data-view="ella">
+    <h2>Sus vuelos <button type="button" id="goAssign">Asignaciones</button></h2>
+    <div id="herList"><div class="empty">Cargando…</div></div>
+  </section>
+
+  <!-- ===================== FLOTA (lista) ===================== -->
+  <section class="card" data-view="flota" hidden>
+    <input class="search" id="q" type="search" placeholder="Buscar matrícula, modelo o aeropuerto" autocomplete="off">
+    <div class="seg" id="fseg">
+      <button data-f="air" class="on">En vuelo</button>
+      <button data-f="ground">En tierra</button>
+      <button data-f="all">Todos</button>
+    </div>
+    <div id="fleetList"></div>
+  </section>
+
+  <!-- ===================== AJUSTES ===================== -->
+  <section class="card" data-view="ajustes" hidden>
+    <h2>¿En qué avión va? <button type="button" id="addAssign">+ Añadir</button></h2>
+    <p class="note">Indica el avión y los días de cada rotación. Sus vuelos, el calendario y el destacado del mapa salen de aquí. Lo más rápido: abre un avión en <b>Flota</b> y pulsa <b>«Va en este avión»</b>.</p>
+    <div id="assignList"></div>
+  </section>
+
+  <section class="card" data-view="ajustes" hidden>
+    <h2>Calendario</h2>
+    <p class="note">Suscríbete una vez y sus vuelos aparecerán solos en tu Calendario del iPhone o del Mac.</p>
+    <a class="btn" id="calBtn" href="#">📅 Suscribirse en Calendario</a>
+    <button class="btn ghost" id="copyBtn" type="button" style="margin-top:8px">Copiar enlace</button>
+    <div class="url" id="calUrl"></div>
+  </section>
+
+  <section class="card" data-view="ajustes" hidden>
+    <h2>Edición desde la web</h2>
+    <div id="tokenState" class="note"></div>
+    <div id="tokenForm">
+      <p class="note">Para guardar cambios desde aquí, pega un <b>token de GitHub</b> (fine-grained, solo para este repositorio, con permiso <code>Contents: Read and write</code>). Se guarda únicamente en este dispositivo.</p>
+      <label for="repoInp">Repositorio</label>
+      <input class="inp" id="repoInp" placeholder="usuario/vuelos" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <label for="tokInp">Token</label>
+      <input class="inp" id="tokInp" type="password" placeholder="github_pat_…" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <div class="row"><button class="btn" id="tokSave" type="button">Conectar</button></div>
+    </div>
+    <div class="row" id="tokOut" hidden><button class="btn danger" id="tokDel" type="button">Desconectar este dispositivo</button></div>
+  </section>
+
+  <section class="card" data-view="ajustes" hidden>
+    <h2>Datos</h2>
+    <p class="note" id="dataInfo"></p>
+  </section>
+
+  <footer data-view="ella flota ajustes">Datos ADS-B públicos de adsb.lol, airplanes.live y adsb.fi · Horas de Madrid · «~» = hora estimada · No afiliado a ninguna aerolínea.</footer>
+</div>
+
+<nav><div class="in">
+  <button type="button" data-tab="ella" class="on"><i>💛</i><span id="tabElla">Ella</span></button>
+  <button type="button" data-tab="flota"><i>✈️</i>Flota</button>
+  <button type="button" data-tab="ajustes"><i>⚙️</i>Ajustes</button>
+</div></nav>
+
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet"><div class="grab"></div><div id="sheetBody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(() => {
+'use strict';
+// ------------------------------------------------------------------ utilidades
+const TZ = 'Europe/Madrid';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const F = o => new Intl.DateTimeFormat('es-ES', Object.assign({timeZone: TZ}, o));
+const fTime = F({hour: '2-digit', minute: '2-digit'}), fDay = F({day: 'numeric'}), fWd = F({weekday: 'short'});
+const fMonth = F({month: 'long', year: 'numeric'}), fDate = F({day: 'numeric', month: 'short'});
+const fYmd = new Intl.DateTimeFormat('en-CA', {timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit'});
+let regionNames; try { regionNames = new Intl.DisplayNames(['es'], {type: 'region'}); } catch (e) {}
+const country = c => { try { return regionNames ? regionNames.of(c) : c; } catch (e) { return c; } };
+const flag = c => c && c.length === 2 ? String.fromCodePoint(...[...c.toUpperCase()].map(x => 127397 + x.charCodeAt(0))) : '';
+const code = a => a ? (a.iata || a.icao) : '?';
+const cityOf = a => a ? String(a.ciudad || a.nombre).split(',')[0] : '';
+const T = s => s ? Date.parse(s) : null;
+const ymd = t => fYmd.format(t);
+const today = () => ymd(Date.now());
+const addDays = (s, n) => { const d = new Date(s + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const dur = m => { if (m == null) return '—'; const h = Math.floor(m / 60), mm = Math.round(m % 60); return h ? `${h} h ${String(mm).padStart(2, '0')}` : `${mm} min`; };
+const ago = t => { const s = (Date.now() - t) / 1000; if (s < 90) return 'hace un momento'; if (s < 3600) return `hace ${Math.round(s/60)} min`; if (s < 86400) return `hace ${Math.round(s/3600)} h`; return `hace ${Math.round(s/86400)} d`; };
+const km = (a, b) => { const R = 6371, r = Math.PI / 180, dl = (b[0]-a[0])*r, dn = (b[1]-a[1])*r; const h = Math.sin(dl/2)**2 + Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dn/2)**2; return 2*R*Math.asin(Math.sqrt(h)); };
+const fmtDateStr = s => s ? fDate.format(new Date(s + 'T12:00:00Z')) : '';
+const toast = (msg, ms = 2600) => { const el = $('toast'); el.textContent = msg; el.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('on'), ms); };
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
+
+// ------------------------------------------------------------------ repositorio y token
+function detectRepo() {
+  const saved = store.get('vuelos.repo');
+  if (saved) return saved;
+  if (location.hostname.endsWith('.github.io')) {
+    const owner = location.hostname.split('.')[0];
+    const seg = location.pathname.split('/').filter(Boolean)[0];
+    return `${owner}/${seg && !seg.includes('.') ? seg : owner + '.github.io'}`;
+  }
+  return '';
+}
+let REPO = detectRepo();
+let TOKEN = store.get('vuelos.token');
+
+const b64dec = s => decodeURIComponent(escape(atob(s.replace(/\n/g, ''))));
+const b64enc = s => btoa(unescape(encodeURIComponent(s)));
+async function gh(path, opts = {}) {
+  const r = await fetch(`https://api.github.com/repos/${REPO}/${path}`, Object.assign({}, opts, {
+    headers: Object.assign({Accept: 'application/vnd.github+json', Authorization: `Bearer ${TOKEN}`}, opts.headers || {})
+  }));
+  if (!r.ok) throw new Error(`GitHub ${r.status}`);
+  return r.status === 204 ? null : r.json();
+}
+async function ghRead(file, ref) {
+  const j = await gh(`contents/${file}?ref=${ref}&t=${Date.now()}`, {cache: 'no-store'});
+  return {data: JSON.parse(b64dec(j.content)), sha: j.sha};
+}
+async function ghWrite(file, obj, sha, message) {
+  return gh(`contents/${file}`, {method: 'PUT', body: JSON.stringify({
+    message, branch: 'main', sha, content: b64enc(JSON.stringify(obj, null, 2) + '\n')})});
+}
+
+// Datos: primero la rama "datos" (más reciente), si no, la copia publicada con la web.
+async function loadData(name) {
+  const tries = [];
+  if (TOKEN && REPO) tries.push(async () => {
+    const r = await fetch(`https://api.github.com/repos/${REPO}/contents/data/${name}?ref=datos&t=${Date.now()}`,
+      {headers: {Accept: 'application/vnd.github.raw', Authorization: `Bearer ${TOKEN}`}, cache: 'no-store'});
+    if (!r.ok) throw 0; return r.json();
+  });
+  if (REPO) tries.push(async () => {
+    const r = await fetch(`https://raw.githubusercontent.com/${REPO}/datos/data/${name}?t=${Date.now()}`, {cache: 'no-store'});
+    if (!r.ok) throw 0; return r.json();
+  });
+  tries.push(async () => { const r = await fetch(`data/${name}?t=${Date.now()}`, {cache: 'no-store'}); if (!r.ok) throw 0; return r.json(); });
+  for (const t of tries) { try { return await t(); } catch (e) {} }
+  return null;
+}
+
+// ------------------------------------------------------------------ estado
+let fleet = null, her = null, assign = {asignaciones: [], incluir_vuelos: [], excluir_vuelos: []}, assignSha = null;
+let histFleet = null, airportsDb = null;
+let view = store.get('vuelos.view') || 'ella', range = 'month', fFilter = 'air', showGround = false;
+let selFlight = null, fitted = {}, openHex = null;
+
+const label = () => assign.etiqueta || 'Ella';
+const planeByHex = h => fleet && fleet.aviones.find(a => a.hex === h);
+function activeAssignment(day = today()) {
+  return (assign.asignaciones || []).filter(a => (!a.desde || a.desde <= day) && (!a.hasta || a.hasta >= day))
+    .sort((a, b) => (b.desde || '').localeCompare(a.desde || ''))[0] || null;
+}
+function herHex() {
+  const a = activeAssignment();
+  if (!a) return null;
+  if (a.hex) return a.hex.toLowerCase();
+  const p = fleet && fleet.aviones.find(x => x.matricula.toUpperCase() === (a.matricula || '').toUpperCase());
+  return p ? p.hex : null;
+}
+const herFlights = () => (her && her.vuelos || []).filter(f => !(assign.excluir_vuelos || []).includes(f.id));
+
+// ------------------------------------------------------------------ mapa
+const map = L.map('map', {zoomControl: false, worldCopyJump: true}).setView([44, 6], 4);
+map.attributionControl.setPrefix('');
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 12, attribution: '© OpenStreetMap', className: 'dark-tiles'}).addTo(map);
+const layer = L.layerGroup().addTo(map);
+const planeSvg = (deg, color, size, cls) => L.divIcon({className: '', iconSize: [size, size], iconAnchor: [size/2, size/2], html:
+  `<svg class="pl ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" style="transform:rotate(${deg}deg)"><path fill="${color}" stroke="#0b1020" stroke-width=".6" d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>`});
+const dotIcon = cls => L.divIcon({className: '', iconSize: [12, 12], iconAnchor: [6, 6], html: `<div class="${cls}"></div>`});
+
+function gc(a, b, n = 48) {
+  const r = Math.PI / 180, v = p => [Math.cos(p[0]*r)*Math.cos(p[1]*r), Math.cos(p[0]*r)*Math.sin(p[1]*r), Math.sin(p[0]*r)];
+  const A = v(a), B = v(b), d = Math.acos(Math.min(1, A[0]*B[0] + A[1]*B[1] + A[2]*B[2]));
+  if (d < 1e-6) return [a, b];
+  const out = [];
+  for (let i = 0; i <= n; i++) {
+    const f = i / n, s1 = Math.sin((1-f)*d) / Math.sin(d), s2 = Math.sin(f*d) / Math.sin(d);
+    const x = s1*A[0] + s2*B[0], y = s1*A[1] + s2*B[1], z = s1*A[2] + s2*B[2];
+    out.push([Math.atan2(z, Math.hypot(x, y)) / r, Math.atan2(y, x) / r]);
+  }
+  return out;
+}
+function flightPath(f) {
+  let pts = f.track && f.track.length > 2 ? f.track.map(p => [p[0], p[1]]) : null;
+  if (!pts) return f.origen && f.destino ? gc([f.origen.lat, f.origen.lon], [f.destino.lat, f.destino.lon]) : null;
+  if (f.origen) pts.unshift([f.origen.lat, f.origen.lon]);
+  if (f.destino && f.estado !== 'en_vuelo') pts.push([f.destino.lat, f.destino.lon]);
+  return pts;
+}
+
+function drawMap(refit) {
+  layer.clearLayers();
+  if (!fleet) return;
+  const hh = herHex(), bounds = [], aps = new Map();
+  if (view === 'ella') {
+    herFlights().forEach(f => {
+      if (f.estado === 'en_vuelo' && f.hex === hh) return; // lo dibuja la capa de flota en directo
+      const pts = flightPath(f); if (!pts) return;
+      const live = f.estado === 'en_vuelo', sel = selFlight === f.id;
+      [f.origen, f.destino].forEach(a => a && aps.set(a.icao, a));
+      L.polyline(pts, {color: live ? '#3ad29f' : sel ? '#ffd166' : '#4f9dff', weight: live || sel ? 3 : 1.4,
+        opacity: live || sel ? .95 : .25, dashArray: f.destino_aprox && !sel ? '4 6' : null}).addTo(layer);
+      if (sel || live) bounds.push(...pts);
+    });
+    aps.forEach(a => L.marker([a.lat, a.lon], {icon: dotIcon('ap-dot')})
+      .bindTooltip(code(a), {permanent: aps.size <= 12, direction: 'top', offset: [0, -6], className: 'tip'}).addTo(layer));
+  }
+  // flota
+  fleet.aviones.forEach(p => {
+    const isHer = p.hex === hh, u = p.ultima;
+    if (p.fase === 'aire' && u) {
+      if (view === 'flota' || isHer) {
+        if (p.vuelo && p.vuelo.track && (isHer || openHex === p.hex)) {
+          const pts = p.vuelo.track.map(x => [x[0], x[1]]);
+          if (p.vuelo.origen) pts.unshift([p.vuelo.origen.lat, p.vuelo.origen.lon]);
+          L.polyline(pts, {color: isHer ? '#ffd166' : '#7cc4ff', weight: 2.5, opacity: .9}).addTo(layer);
+          if (isHer && view === 'ella') bounds.push(...pts);
+        }
+        const m = L.marker([u.lat, u.lon], {icon: planeSvg(u.trk || 0, isHer ? '#ffd166' : (view === 'flota' ? '#7cc4ff' : '#59627e'), isHer ? 34 : 22, isHer ? 'her' : ''), zIndexOffset: isHer ? 1000 : 0}).addTo(layer);
+        if (isHer) m.bindTooltip(`💛 ${esc(label())}`, {permanent: true, direction: 'right', offset: [14, 0], className: 'tip her'});
+        m.on('click', () => openPlane(p.hex));
+        if (isHer && view === 'ella') bounds.push([u.lat, u.lon]);
+      } else if (view === 'ella') {
+        L.marker([u.lat, u.lon], {icon: planeSvg(u.trk || 0, '#3a4567', 16, ''), interactive: false}).addTo(layer);
+      }
+      if (view === 'flota') bounds.push([u.lat, u.lon]);
+    } else if (p.aeropuerto && ((view === 'flota' && showGround) || isHer)) {
+      const m = L.marker([p.aeropuerto.lat, p.aeropuerto.lon], {icon: dotIcon(isHer ? 'gd her' : 'gd'), zIndexOffset: isHer ? 900 : 0}).addTo(layer);
+      if (isHer) { m.bindTooltip(`💛 ${esc(label())} · ${code(p.aeropuerto)}`, {permanent: true, direction: 'right', offset: [8, 0], className: 'tip her'}); bounds.push([p.aeropuerto.lat, p.aeropuerto.lon]); }
+      m.on('click', () => openPlane(p.hex));
+    }
+  });
+  if (refit || !fitted[view]) {
+    fitted[view] = true;
+    if (bounds.length > 1) map.fitBounds(bounds, {padding: [40, 40], maxZoom: 7});
+    else if (bounds.length === 1) map.setView(bounds[0], 6);
+    else if (aps.size) map.fitBounds([...aps.values()].map(a => [a.lat, a.lon]), {padding: [30, 30], maxZoom: 6});
+  }
+}
+$('btnFit').onclick = () => drawMap(true);
+$('btnGround').onclick = () => { showGround = !showGround; $('btnGround').style.color = showGround ? 'var(--her)' : ''; drawMap(); toast(showGround ? 'Mostrando aviones en tierra' : 'Ocultando aviones en tierra'); };
+
+// ------------------------------------------------------------------ aeropuertos
+async function nearCity(lat, lon) {
+  if (!airportsDb) { try { airportsDb = await (await fetch('tracker/airports.json')).json(); } catch (e) { airportsDb = []; } }
+  let best = null, bd = 1e9;
+  for (const a of airportsDb) {
+    if (Math.abs(a[5] - lat) > 3 || Math.abs(a[6] - lon) > 4) continue;
+    const d = km([lat, lon], [a[5], a[6]]); if (d < bd) { bd = d; best = a; }
+  }
+  return best ? `${String(best[3] || best[2]).split(',')[0]} ${flag(best[4])}` : null;
+}
+
+// ------------------------------------------------------------------ vista ELLA
+async function renderHero() {
+  const hh = herHex(), p = hh && planeByHex(hh), a = activeAssignment();
+  $('tabElla').textContent = label();
+  if (!a) {
+    $('heroBody').hidden = true; $('noAssign').hidden = false; $('planeTag').hidden = true;
+    $('state').className = 'state unknown'; $('state').textContent = '● Sin avión asignado hoy';
+    $('noAssign').innerHTML = `Dime en qué avión va ${esc(label())}: abre <b>Flota</b>, elige el avión y pulsa <b>«Va en este avión»</b>, o añádelo en <b>Ajustes</b>.`;
+    return;
+  }
+  $('heroBody').hidden = false; $('noAssign').hidden = true;
+  $('planeTag').hidden = false;
+  $('planeTag').textContent = `${a.matricula}${p ? ' · ' + p.modelo : ''}`;
+  $('planeTag').onclick = () => hh && openPlane(hh);
+  $('facts').hidden = true; $('midTxt').textContent = ''; $('sub').textContent = '';
+  const st = $('state');
+  if (!p) {
+    st.className = 'state unknown'; st.textContent = '● Esperando señal';
+    ['from', 'to'].forEach(i => $(i).textContent = '—'); $('fromCity').textContent = ''; $('toCity').textContent = '';
+    $('sub').textContent = `Aún no se ha recibido señal de ${a.matricula}. Aparecerá en cuanto encienda el transpondedor.`;
+    return;
+  }
+  const u = p.ultima;
+  if (p.fase === 'aire' && p.vuelo) {
+    const v = p.vuelo;
+    st.className = 'state air'; st.textContent = '● En vuelo';
+    $('from').textContent = code(v.origen);
+    $('fromCity').textContent = v.origen ? `${cityOf(v.origen)} · ${v.salida_aprox ? '~' : ''}${fTime.format(T(v.salida))}` : 'Origen desconocido';
+    $('to').textContent = '…'; $('toCity').textContent = 'Destino al aterrizar';
+    $('midTxt').textContent = v.callsign || p.callsign || '';
+    $('facts').hidden = false;
+    $('fAlt').textContent = u ? `${Math.round(u.alt).toLocaleString('es-ES')} ft` : '—';
+    $('fGs').textContent = u ? `${Math.round(u.gs * 1.852)} km/h` : '—';
+    $('fTime').textContent = dur((Date.now() - T(v.salida)) / 60000);
+    if (u) {
+      const c = await nearCity(u.lat, u.lon);
+      const vs = u.vs > 600 ? ' · subiendo' : u.vs < -600 ? ' · descendiendo' : '';
+      $('sub').textContent = `${c ? 'Cerca de ' + c : ''}${vs} · señal ${ago(u.ts * 1000)}`;
+    }
+  } else if (p.fase === 'tierra' || p.ultimo_vuelo) {
+    const lv = p.ultimo_vuelo, ap = p.aeropuerto || (lv && lv.destino);
+    st.className = 'state ground'; st.textContent = '● En tierra';
+    $('from').textContent = lv ? code(lv.origen) : '—';
+    $('fromCity').textContent = lv && lv.origen ? cityOf(lv.origen) : '';
+    $('to').textContent = ap ? code(ap) : '—';
+    $('toCity').textContent = ap ? `${cityOf(ap)} ${flag(ap.pais)}` : '';
+    $('midTxt').textContent = lv ? 'último vuelo' : '';
+    if (lv && lv.llegada) $('sub').textContent = `Aterrizó ${fDate.format(T(lv.llegada))} a las ${fTime.format(T(lv.llegada))}${ap ? ' · ' + ap.nombre : ''}`;
+    else if (ap) $('sub').textContent = ap.nombre;
+  } else {
+    st.className = 'state unknown'; st.textContent = '● Sin señal';
+    ['from', 'to'].forEach(i => $(i).textContent = '—'); $('fromCity').textContent = ''; $('toCity').textContent = '';
+    $('sub').textContent = u ? `Última señal ${ago(u.ts * 1000)}` : '';
+  }
+}
+
+function renderStats() {
+  const mk = ymd(Date.now()).slice(0, 7), yr = mk.slice(0, 4);
+  const fs = herFlights().filter(f => f.estado !== 'en_vuelo').filter(f => {
+    const k = ymd(T(f.salida)).slice(0, 7); return range === 'all' || (range === 'year' ? k.startsWith(yr) : k === mk);
+  });
+  const aps = new Set(), cs = new Set(), dest = {};
+  let mins = 0, dist = 0, longest = null;
+  fs.forEach(f => {
+    mins += f.duracion_min || 0; dist += f.distancia_km || 0;
+    [f.origen, f.destino].forEach(a => { if (a) { aps.add(a.icao); cs.add(a.pais); } });
+    if (f.destino) { const c = cityOf(f.destino); dest[c] = (dest[c] || 0) + 1; }
+    if (!longest || (f.duracion_min || 0) > (longest.duracion_min || 0)) longest = f;
+  });
+  $('sF').textContent = fs.length;
+  $('sH').textContent = `${(Math.round(mins / 6) / 10).toLocaleString('es-ES')} h`;
+  $('sK').textContent = Math.round(dist).toLocaleString('es-ES');
+  $('sA').textContent = aps.size; $('sC').textContent = cs.size;
+  $('sL').textContent = longest ? `${code(longest.origen)}–${code(longest.destino)}` : '—';
+  $('pills').innerHTML = Object.entries(dest).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([c, n]) => `<span><b>${esc(c)}</b> ×${n}</span>`).join('')
+    + [...cs].filter(Boolean).map(c => `<span>${flag(c)} ${esc(country(c))}</span>`).join('');
+}
+
+function flightRow(f, opts = {}) {
+  const t = T(f.salida), live = f.estado === 'en_vuelo';
+  const tag = live ? '<span class="tag live">EN VUELO</span>' : f.estado === 'sin_senal' ? '<span class="tag">SIN SEÑAL</span>'
+    : f.destino_aprox ? '<span class="tag">destino aprox.</span>' : '';
+  const herTag = opts.herMark ? '<span class="tag her">💛</span>' : '';
+  const sub = opts.plane ? `${esc(f.matricula)} · ${esc(cityOf(f.origen) || '?')} → ${esc(live ? 'en ruta' : cityOf(f.destino) || '?')}`
+    : `${esc(cityOf(f.origen) || 'desconocido')} → ${esc(live ? 'en ruta' : cityOf(f.destino) || 'desconocido')}`;
+  return `<div class="fl${selFlight === f.id ? ' sel' : ''}" data-id="${esc(f.id)}">
+    <div class="d"><b>${fDay.format(t)}</b><span>${fWd.format(t).replace('.', '')}</span></div>
+    <div class="r">${code(f.origen)} → ${live ? '…' : code(f.destino)}${tag}${herTag}<small>${sub}</small></div>
+    <div class="t"><b>${f.salida_aprox ? '~' : ''}${fTime.format(t)}${f.llegada ? '–' + (f.llegada_aprox ? '~' : '') + fTime.format(T(f.llegada)) : ''}</b>${live ? dur((Date.now() - t) / 60000) : dur(f.duracion_min)}${f.distancia_km ? ' · ' + f.distancia_km.toLocaleString('es-ES') + ' km' : ''}</div>
+  </div>`;
+}
+let herLimit = 40;
+function renderHerList() {
+  const fs = herFlights().slice().sort((a, b) => T(b.salida) - T(a.salida));
+  if (!fs.length) {
+    $('herList').innerHTML = `<div class="empty">${her ? 'Todavía no hay vuelos en sus asignaciones. Aparecerán solos en cuanto despegue.' : 'Aún no hay datos: espera a la primera ejecución del rastreador.'}</div>`;
+    return;
+  }
+  let html = '', cur = '';
+  fs.slice(0, herLimit).forEach(f => {
+    const m = fMonth.format(T(f.salida));
+    if (m !== cur) { html += `<div class="month">${m}</div>`; cur = m; }
+    html += flightRow(f, {plane: true});
+  });
+  if (fs.length > herLimit) html += `<button class="more" id="moreHer" type="button">Ver más</button>`;
+  $('herList').innerHTML = html;
+  $('herList').querySelectorAll('.fl').forEach(el => el.onclick = () => openFlight(el.dataset.id));
+  const mb = $('moreHer'); if (mb) mb.onclick = () => { herLimit += 60; renderHerList(); };
+}
+
+// ------------------------------------------------------------------ vista FLOTA
+function statusLine(p) {
+  const u = p.ultima;
+  if (p.fase === 'aire' && p.vuelo) return {s: `${code(p.vuelo.origen)} → … · ${u ? Math.round(u.alt / 100) * 100 : '?'} ft`, x: `<b>${dur((Date.now() - T(p.vuelo.salida)) / 60000)}</b>en el aire`};
+  if (p.fase === 'tierra' && p.aeropuerto) return {s: `En tierra · ${cityOf(p.aeropuerto)} ${flag(p.aeropuerto.pais)}`, x: u ? `<b>${code(p.aeropuerto)}</b>${ago(u.ts * 1000)}` : `<b>${code(p.aeropuerto)}</b>`};
+  if (p.ultimo_vuelo && p.ultimo_vuelo.destino) return {s: `Último: ${code(p.ultimo_vuelo.origen)} → ${code(p.ultimo_vuelo.destino)}`, x: u ? ago(u.ts * 1000) : ''};
+  return {s: 'Sin señal reciente', x: u ? ago(u.ts * 1000) : ''};
+}
+function renderFleet() {
+  if (!fleet) return;
+  const hh = herHex(), all = fleet.aviones;
+  const air = all.filter(p => p.fase === 'aire').length;
+  $('nAir').textContent = air; $('nGround').textContent = all.filter(p => p.fase === 'tierra').length; $('nAll').textContent = all.length;
+  const q = $('q').value.trim().toLowerCase();
+  let list = all.filter(p => fFilter === 'all' || (fFilter === 'air' ? p.fase === 'aire' : p.fase !== 'aire'));
+  if (q) list = all.filter(p => [p.matricula, p.modelo, p.tipo, p.callsign, p.aeropuerto && p.aeropuerto.icao, p.aeropuerto && p.aeropuerto.iata, p.aeropuerto && cityOf(p.aeropuerto),
+    p.vuelo && p.vuelo.origen && cityOf(p.vuelo.origen)].filter(Boolean).join(' ').toLowerCase().includes(q));
+  list.sort((a, b) => (b.hex === hh) - (a.hex === hh) || (b.fase === 'aire') - (a.fase === 'aire') || a.matricula.localeCompare(b.matricula));
+  $('fleetList').innerHTML = list.length ? list.map(p => {
+    const s = statusLine(p), isHer = p.hex === hh;
+    return `<div class="ac" data-h="${p.hex}"><div class="ic ${isHer ? 'her' : p.fase === 'aire' ? 'air' : ''}">${isHer ? '💛' : p.fase === 'aire' ? '✈️' : '·'}</div>
+      <div style="min-width:0"><div class="n">${esc(p.matricula)}<small>${esc(p.modelo || '')}</small></div><div class="s">${esc(s.s)}</div></div>
+      <div class="x">${s.x}</div></div>`;
+  }).join('') : `<div class="empty">${q ? 'Nada coincide con la búsqueda.' : fFilter === 'air' ? 'Ningún avión de la flota en el aire ahora mismo.' : 'Sin aviones.'}</div>`;
+  $('fleetList').querySelectorAll('.ac').forEach(el => el.onclick = () => openPlane(el.dataset.h));
+}
+$('q').oninput = renderFleet;
+$('fseg').querySelectorAll('button').forEach(b => b.onclick = () => {
+  fFilter = b.dataset.f; $('fseg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); renderFleet();
+});
+
+// ------------------------------------------------------------------ hoja: avión
+function openSheet(html) { $('sheetBody').innerHTML = html; $('sheet').classList.add('on'); $('sheetBg').classList.add('on'); }
+function closeSheet() { $('sheet').classList.remove('on'); $('sheetBg').classList.remove('on'); openHex = null; drawMap(); }
+$('sheetBg').onclick = closeSheet;
+(() => { let y0 = null; const s = $('sheet');
+  s.addEventListener('touchstart', e => { if (s.scrollTop <= 0) y0 = e.touches[0].clientY; }, {passive: true});
+  s.addEventListener('touchmove', e => { if (y0 != null && e.touches[0].clientY - y0 > 80) { y0 = null; closeSheet(); } }, {passive: true});
+  s.addEventListener('touchend', () => y0 = null); })();
+
+async function openPlane(h) {
+  const p = planeByHex(h); if (!p) return;
+  openHex = h; drawMap();
+  const isHer = h === herHex(), u = p.ultima, s = statusLine(p);
+  if (p.fase === 'aire' && u) map.setView([u.lat, u.lon], Math.max(map.getZoom(), 5));
+  else if (p.aeropuerto) map.setView([p.aeropuerto.lat, p.aeropuerto.lon], Math.max(map.getZoom(), 5));
+  const c = p.fase === 'aire' && u ? await nearCity(u.lat, u.lon) : null;
+  openSheet(`
+    <h3>${isHer ? '💛 ' : ''}${esc(p.matricula)}</h3>
+    <div class="meta">${esc(p.modelo || p.tipo || '')}${p.callsign ? ' · ' + esc(p.callsign) : ''} · hex ${esc(p.hex)}</div>
+    <div class="stats" style="margin-bottom:12px">
+      <div class="stat"><b class="sm">${p.fase === 'aire' ? 'En vuelo' : p.fase === 'tierra' ? 'En tierra' : 'Sin señal'}</b><span>${p.fase === 'aire' && p.vuelo ? 'desde ' + esc(code(p.vuelo.origen)) : p.aeropuerto ? esc(cityOf(p.aeropuerto)) : (u ? ago(u.ts * 1000) : '—')}</span></div>
+      <div class="stat"><b class="sm">${u && p.fase === 'aire' ? Math.round(u.alt).toLocaleString('es-ES') + ' ft' : '—'}</b><span>altitud</span></div>
+      <div class="stat"><b class="sm">${u && p.fase === 'aire' ? Math.round(u.gs * 1.852) + ' km/h' : '—'}</b><span>velocidad</span></div>
+    </div>
+    ${c ? `<p class="note">Ahora cerca de ${esc(c)}.</p>` : ''}
+    ${isHer ? `<div class="btn ghost" style="cursor:default">💛 ${esc(label())} va en este avión</div>`
+            : `<button class="btn her" id="setHer" type="button">💛 ${esc(label())} va en este avión</button>`}
+    <div class="links" style="margin-top:10px">
+      <a href="https://www.flightradar24.com/data/aircraft/${esc(p.matricula.toLowerCase())}" target="_blank" rel="noopener">Flightradar24</a>
+      <a href="https://globe.adsbexchange.com/?icao=${esc(p.hex)}" target="_blank" rel="noopener">ADS-B Exch.</a>
+      <a href="https://planefinder.net/data/aircraft/${esc(p.matricula)}" target="_blank" rel="noopener">Plane Finder</a>
+    </div>
+    <h2 style="margin-top:20px">Vuelos recientes de este avión</h2>
+    <div id="planeHist"><div class="empty">Cargando…</div></div>`);
+  const sb = $('setHer'); if (sb) sb.onclick = () => assignFromToday(p);
+  if (!histFleet) histFleet = await loadData('historial_flota.json') || [];
+  const fs = histFleet.filter(f => f.hex === h).sort((a, b) => T(b.salida) - T(a.salida)).slice(0, 12);
+  const herIds = new Set(herFlights().map(f => f.id));
+  $('planeHist').innerHTML = fs.length ? fs.map(f => flightRow(f, {herMark: herIds.has(f.id)})).join('')
+    + `<p class="note" style="margin-top:10px">Toca un vuelo para marcarlo o desmarcarlo como suyo.</p>`
+    : '<div class="empty">Sin vuelos registrados en los últimos días.</div>';
+  $('planeHist').querySelectorAll('.fl').forEach(el => el.onclick = () => toggleFlight(el.dataset.id, herIds.has(el.dataset.id)));
+}
+
+function openFlight(id) {
+  const f = herFlights().find(x => x.id === id); if (!f) return;
+  selFlight = id; renderHerList(); drawMap(true);
+  openSheet(`
+    <h3>${code(f.origen)} → ${f.estado === 'en_vuelo' ? '…' : code(f.destino)}</h3>
+    <div class="meta">${fDate.format(T(f.salida))} · ${esc(f.matricula)} · ${esc(f.modelo || '')}${f.callsign ? ' · ' + esc(f.callsign) : ''}</div>
+    <div class="stats">
+      <div class="stat"><b class="sm">${f.salida_aprox ? '~' : ''}${fTime.format(T(f.salida))}</b><span>${esc(cityOf(f.origen) || 'salida')}</span></div>
+      <div class="stat"><b class="sm">${f.llegada ? (f.llegada_aprox ? '~' : '') + fTime.format(T(f.llegada)) : '—'}</b><span>${esc(cityOf(f.destino) || 'llegada')}</span></div>
+      <div class="stat"><b class="sm">${f.estado === 'en_vuelo' ? dur((Date.now() - T(f.salida)) / 60000) : dur(f.duracion_min)}</b><span>${f.distancia_km ? f.distancia_km.toLocaleString('es-ES') + ' km' : 'duración'}</span></div>
+    </div>
+    <p class="note" style="margin-top:12px">${f.origen ? esc(f.origen.nombre) : 'Origen desconocido'} → ${f.destino ? esc(f.destino.nombre) : (f.estado === 'en_vuelo' ? 'en ruta' : 'destino desconocido')}${f.alt_max ? ` · altitud máx. ${f.alt_max.toLocaleString('es-ES')} ft` : ''}</p>
+    <button class="btn danger" id="notHers" type="button">No iba en este vuelo</button>`);
+  $('notHers').onclick = () => toggleFlight(id, true);
+}
+
+// ------------------------------------------------------------------ guardar cambios
+function needToken() {
+  if (TOKEN && REPO) return false;
+  closeSheet(); setView('ajustes');
+  toast('Para guardar cambios conecta GitHub en Ajustes', 3500);
+  return true;
+}
+async function saveAssign(mutator, msg) {
+  if (needToken()) return false;
+  try {
+    const {data, sha} = await ghRead('asignaciones.json', 'main');
+    data.asignaciones = data.asignaciones || []; data.incluir_vuelos = data.incluir_vuelos || []; data.excluir_vuelos = data.excluir_vuelos || [];
+    mutator(data);
+    const r = await ghWrite('asignaciones.json', data, sha, msg);
+    assign = data; assignSha = r && r.content && r.content.sha;
+    renderAll(); toast('Guardado. Sus vuelos y el calendario se actualizan en unos minutos.', 3500);
+    return true;
+  } catch (e) {
+    toast('No se pudo guardar: ' + e.message + '. Revisa el token en Ajustes.', 4500);
+    return false;
+  }
+}
+function assignFromToday(p) {
+  const d = today();
+  saveAssign(data => {
+    data.asignaciones = data.asignaciones.filter(a => !(a.desde === d && !a.hasta));
+    data.asignaciones.forEach(a => { if ((!a.hasta || a.hasta >= d) && (!a.desde || a.desde < d)) a.hasta = addDays(d, -1); });
+    data.asignaciones.push({matricula: p.matricula, hex: p.hex, desde: d, hasta: null, nota: ''});
+    data.asignaciones.sort((a, b) => (a.desde || '').localeCompare(b.desde || ''));
+  }, `${label()} va en ${p.matricula} desde ${d}`).then(ok => { if (ok) closeSheet(); });
+}
+function toggleFlight(id, isHers) {
+  saveAssign(data => {
+    data.incluir_vuelos = data.incluir_vuelos.filter(x => x !== id);
+    data.excluir_vuelos = data.excluir_vuelos.filter(x => x !== id);
+    (isHers ? data.excluir_vuelos : data.incluir_vuelos).push(id);
+  }, isHers ? `No iba en ${id}` : `Iba en ${id}`).then(ok => { if (ok) closeSheet(); });
+}
+
+// ------------------------------------------------------------------ vista AJUSTES
+function renderAssign() {
+  const list = (assign.asignaciones || []).slice().sort((a, b) => (b.desde || '').localeCompare(a.desde || ''));
+  const act = activeAssignment();
+  $('assignList').innerHTML = list.length ? list.map((a, i) => {
+    const p = fleet && fleet.aviones.find(x => x.hex === (a.hex || '').toLowerCase() || x.matricula === a.matricula);
+    return `<div class="as${a === act ? ' now' : ''}"><div><b>${esc(a.matricula)}</b><small>${p ? esc(p.modelo) + ' · ' : ''}${a.desde ? 'desde ' + fmtDateStr(a.desde) : 'siempre'}${a.hasta ? ' hasta ' + fmtDateStr(a.hasta) : ' · sin fecha de fin'}${a.nota ? ' · ' + esc(a.nota) : ''}</small></div>
+      <button type="button" data-i="${(assign.asignaciones || []).indexOf(a)}">Editar</button></div>`;
+  }).join('') : '<div class="empty">Sin asignaciones todavía.</div>';
+  $('assignList').querySelectorAll('button').forEach(b => b.onclick = () => editAssign(+b.dataset.i));
+}
+function editAssign(i) {
+  const a = i >= 0 ? assign.asignaciones[i] : {matricula: '', hex: '', desde: today(), hasta: null, nota: ''};
+  const regs = (fleet ? fleet.aviones : []).map(p => `<option value="${esc(p.matricula)}">${esc(p.modelo || '')}</option>`).join('');
+  openSheet(`
+    <h3>${i >= 0 ? 'Editar asignación' : 'Nueva asignación'}</h3>
+    <div class="meta">Avión en el que va ${esc(label())} durante esas fechas.</div>
+    <label for="eReg">Matrícula</label>
+    <input class="inp" id="eReg" list="regs" value="${esc(a.matricula)}" placeholder="9H-XXX" autocapitalize="characters" autocorrect="off">
+    <datalist id="regs">${regs}</datalist>
+    <div class="grid2">
+      <div><label for="eFrom">Desde</label><input class="inp" id="eFrom" type="date" value="${esc(a.desde || '')}"></div>
+      <div><label for="eTo">Hasta (vacío = sin fin)</label><input class="inp" id="eTo" type="date" value="${esc(a.hasta || '')}"></div>
+    </div>
+    <label for="eNote">Nota (opcional)</label>
+    <input class="inp" id="eNote" value="${esc(a.nota || '')}" placeholder="Rotación noviembre">
+    <div class="row" style="margin-top:16px"><button class="btn" id="eSave" type="button">Guardar</button></div>
+    ${i >= 0 ? '<div class="row"><button class="btn danger" id="eDel" type="button">Eliminar</button></div>' : ''}`);
+  $('eSave').onclick = () => {
+    const reg = $('eReg').value.trim().toUpperCase();
+    if (!reg) return toast('Pon la matrícula');
+    const p = fleet && fleet.aviones.find(x => x.matricula.toUpperCase() === reg);
+    const item = {matricula: reg, hex: p ? p.hex : (a.matricula === reg ? a.hex || '' : ''), desde: $('eFrom').value || null, hasta: $('eTo').value || null, nota: $('eNote').value.trim()};
+    if (item.desde && item.hasta && item.hasta < item.desde) return toast('La fecha de fin es anterior a la de inicio');
+    saveAssign(data => {
+      if (i >= 0) data.asignaciones[i] = item; else data.asignaciones.push(item);
+      data.asignaciones.sort((x, y) => (x.desde || '').localeCompare(y.desde || ''));
+    }, `Asignación ${reg}`).then(ok => ok && closeSheet());
+  };
+  const del = $('eDel'); if (del) del.onclick = () => saveAssign(data => { data.asignaciones.splice(i, 1); }, `Elimina asignación ${a.matricula}`).then(ok => ok && closeSheet());
+}
+$('addAssign').onclick = () => editAssign(-1);
+$('goAssign').onclick = () => setView('ajustes');
+
+function renderSettings() {
+  renderAssign();
+  $('repoInp').value = REPO;
+  const on = !!(TOKEN && REPO);
+  $('tokenForm').hidden = on; $('tokOut').hidden = !on;
+  $('tokenState').innerHTML = on ? `<span class="ok">● Conectado a <b>${esc(REPO)}</b>.</span> Puedes cambiar asignaciones desde la web.`
+    : `<span class="bad">● Sin conectar.</span> Sin token puedes ver todo, pero para cambiar el avión tendrás que editar <code>asignaciones.json</code> en GitHub${REPO ? ` (<a href="https://github.com/${esc(REPO)}/edit/main/asignaciones.json" target="_blank" rel="noopener" style="color:var(--accent2)">abrir</a>)` : ''}.`;
+  const base = location.href.replace(/[#?].*$/, '').replace(/index\.html$/, '').replace(/\/?$/, '/');
+  const ics = base + 'data/vuelos.ics';
+  $('calBtn').href = ics.replace(/^https?:/, 'webcal:'); $('calUrl').textContent = ics;
+  $('dataInfo').innerHTML = fleet ? `Flota actualizada ${ago(T(fleet.actualizado))} (${fTime.format(T(fleet.actualizado))}). ${fleet.aviones.length} aviones de ${esc(fleet.operador || 'la flota')} identificados hasta ahora; la lista crece sola a medida que vuelan.<br>El rastreador consulta cada minuto mientras está activo y GitHub lo lanza cada ~5 min.`
+    : 'Sin datos todavía.';
+}
+$('tokSave').onclick = async () => {
+  const repo = $('repoInp').value.trim().replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '');
+  const tok = $('tokInp').value.trim();
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo) || !tok) return toast('Rellena repositorio (usuario/repo) y token');
+  REPO = repo; TOKEN = tok;
+  try {
+    const {data, sha} = await ghRead('asignaciones.json', 'main');
+    assign = data; assignSha = sha;
+    store.set('vuelos.repo', repo); store.set('vuelos.token', tok);
+    $('tokInp').value = ''; toast('Conectado ✓'); renderAll(); load();
+  } catch (e) {
+    TOKEN = null; toast('No funciona: ' + e.message + '. Revisa repo, token y permisos.', 4500);
+  }
+};
+$('tokDel').onclick = () => { store.set('vuelos.token', null); TOKEN = null; renderSettings(); toast('Token borrado de este dispositivo'); };
+$('copyBtn').onclick = async () => {
+  try { await navigator.clipboard.writeText($('calUrl').textContent); toast('Enlace copiado'); }
+  catch (e) { toast('Mantén pulsado el enlace para copiarlo'); }
+};
+$('range').querySelectorAll('button').forEach(b => b.onclick = () => {
+  range = b.dataset.r; $('range').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); renderStats();
+});
+
+// ------------------------------------------------------------------ navegación
+function setView(v) {
+  view = v; store.set('vuelos.view', v);
+  document.querySelectorAll('[data-view]').forEach(el => el.hidden = !el.dataset.view.split(' ').includes(v));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === v));
+  if (v !== 'ajustes') { setTimeout(() => { map.invalidateSize(); drawMap(); }, 0); }
+  renderAll();
+  window.scrollTo({top: 0});
+}
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => setView(b.dataset.tab));
+
+function renderChip() {
+  const p = planeByHex(herHex());
+  const air = p && p.fase === 'aire';
+  $('chip').classList.toggle('live', !!air);
+  $('chipTxt').textContent = air ? `${label()} en vuelo` : fleet ? ago(T(fleet.actualizado)) : 'Sin datos';
+}
+function renderAll() {
+  document.title = $('title').textContent = view === 'flota' ? `Flota ${fleet && fleet.operador || ''}`.trim() : view === 'ajustes' ? 'Ajustes' : `Vuelos de ${label()}`;
+  renderChip();
+  if (view === 'ella') { renderHero(); renderStats(); renderHerList(); }
+  if (view === 'flota') renderFleet();
+  if (view === 'ajustes') renderSettings();
+  if (view !== 'ajustes') drawMap();
+}
+
+// ------------------------------------------------------------------ carga
+async function loadAssign() {
+  if (TOKEN && REPO) { try { const r = await ghRead('asignaciones.json', 'main'); assign = r.data; assignSha = r.sha; return; } catch (e) {} }
+  try { const r = await fetch('asignaciones.json?t=' + Date.now(), {cache: 'no-store'}); if (r.ok) assign = await r.json(); } catch (e) {}
+}
+async function load() {
+  const [f, h] = await Promise.all([loadData('flota.json'), loadData('ella.json'), loadAssign()]);
+  if (f) fleet = f;
+  if (h) her = h;
+  if (h && h.etiqueta && !assign.etiqueta) assign.etiqueta = h.etiqueta;
+  if (!fleet) {
+    $('chipTxt').textContent = 'Sin datos todavía';
+    $('state').textContent = '● Esperando la primera ejecución';
+    $('sub').textContent = 'El rastreador aún no ha publicado datos. Revisa la pestaña Actions del repositorio.';
+    return;
+  }
+  histFleet = null;
+  renderAll();
+}
+
+// Refresco en directo de su avión (si el navegador puede consultar la API directamente)
+async function liveTick() {
+  const p = planeByHex(herHex());
+  if (!p || p.fase !== 'aire' || document.hidden || view === 'ajustes') return;
+  for (const u of [`https://api.adsb.lol/v2/hex/${p.hex}`, `https://api.airplanes.live/v2/hex/${p.hex}`]) {
+    try {
+      const ctl = new AbortController(); setTimeout(() => ctl.abort(), 6000);
+      const j = await (await fetch(u, {signal: ctl.signal})).json();
+      const a = (j.ac || []).find(x => x.hex === p.hex && x.lat != null); if (!a) continue;
+      const t = Math.round((j.now || Date.now()) / 1000 - (a.seen_pos || a.seen || 0));
+      if (p.ultima && t <= p.ultima.ts) return;
+      p.ultima = {ts: t, lat: a.lat, lon: a.lon, alt: a.alt_baro === 'ground' ? 0 : (a.alt_baro || 0), gs: a.gs || 0, trk: a.track || 0, vs: a.baro_rate || 0};
+      if (p.vuelo && p.vuelo.track) p.vuelo.track.push([a.lat, a.lon, p.ultima.alt]);
+      if (view === 'ella') renderHero();
+      renderChip(); drawMap();
+      return;
+    } catch (e) { /* sin CORS o sin red: seguimos con los datos del rastreador */ }
+  }
+}
+
+setView(['ella', 'flota', 'ajustes'].includes(view) ? view : 'ella');
+load();
+setInterval(load, 60000);
+setInterval(liveTick, 20000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+})();
+</script>
+</body>
+</html>

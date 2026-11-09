@@ -1,0 +1,12 @@
+{
+  "titulo": "Vuelos",
+  "operador": {
+    "nombre": "VistaJet",
+    "prefijos_callsign": ["VJT"],
+    "tipos": ["GL7T", "GL8T", "GLEX", "GL5T", "CL60", "CL35", "CRJ2"]
+  },
+  "siempre_rastrear": [
+    { "matricula": "9H-ILV", "hex": "4d210e", "tipo": "CRJ2" }
+  ],
+  "dias_historial_flota": 30
+}

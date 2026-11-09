@@ -1,0 +1,71 @@
+name: Rastrear flota
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # cada 5 min (GitHub a veces lo retrasa)
+  workflow_dispatch: {}       # botón "Run workflow"
+  push:
+    branches: [main]          # al cambiar asignaciones o la web, se actualiza enseguida
+
+permissions:
+  contents: write   # guardar datos en la rama "datos"
+  pages: write      # publicar la web
+  id-token: write
+
+concurrency:
+  group: rastreador
+  cancel-in-progress: false
+
+jobs:
+  rastrear:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Recuperar datos anteriores
+        env:
+          REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+        run: |
+          git config --global user.name "rastreador"
+          git config --global user.email "rastreador@users.noreply.github.com"
+          if git ls-remote --exit-code --heads "$REMOTE" datos >/dev/null 2>&1; then
+            git clone -q --depth 1 --branch datos "$REMOTE" datos
+          else
+            echo "Primera ejecución: se crea la rama datos"
+            git init -q -b datos datos
+            git -C datos remote add origin "$REMOTE"
+          fi
+          mkdir -p datos/data
+
+      - name: Rastrear (≈4 min, publicando datos cada 2 min)
+        env:
+          DATA_DIR: ${{ github.workspace }}/datos/data
+          MAX_SECONDS: "250"
+          POLL_EVERY: "60"
+          PUSH_EVERY: "120"
+          PUSH_CMD: bash ${{ github.workspace }}/tracker/publicar.sh
+        run: python3 tracker/track.py
+
+      - name: Guardar datos
+        run: bash tracker/publicar.sh
+
+      - name: Preparar web
+        run: |
+          mkdir -p _site/tracker
+          cp index.html manifest.webmanifest robots.txt apple-touch-icon.png icon-192.png icon-512.png \
+             config.json asignaciones.json _site/
+          cp tracker/airports.json _site/tracker/
+          cp -r datos/data _site/data
+          rm -f _site/data/state.json _site/data/_tracks.json _site/data/*.tmp
+          touch _site/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
