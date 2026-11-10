@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -sS -D h.txt --compressed -A 'vuelos-tracker/2.0' -o f.json https://globe.adsb.lol/data/traces/0e/trace_full_4d210e.json
+          curl -sS -L -D h.txt --compressed -A 'vuelos-tracker/2.0' -o f.json https://globe.adsb.lol/data/traces/0e/trace_full_4d210e.json
           cat h.txt
           python3 - <<'PY'
           import json, datetime
