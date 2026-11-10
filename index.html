@@ -190,6 +190,10 @@
   .sheet{position:fixed;left:0;right:0;bottom:0;z-index:1001;background:var(--sheet);border-top:1px solid var(--line);border-radius:22px 22px 0 0;
          padding:10px 18px calc(env(safe-area-inset-bottom) + 18px);max-height:86vh;overflow-y:auto;transform:translateY(105%);transition:transform .25s ease;max-width:760px;margin:0 auto}
   .sheet.on{transform:none}
+  /* ficha flotante (avión / vuelo): no bloquea el mapa */
+  .sheet.float{max-height:46vh;box-shadow:0 -8px 40px rgba(0,0,0,.28)}
+  .sheet .x{position:sticky;top:0;float:right;margin:-2px -6px 0 8px;width:32px;height:32px;border-radius:50%;border:0;background:var(--card2);color:var(--muted);font-size:20px;line-height:1;cursor:pointer;z-index:2}
+  .sheet:not(.float) .x{display:none}
   .grab{width:40px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 12px}
   .sheet h3{font-size:24px;font-weight:780;letter-spacing:-.02em}
   .sheet .meta{color:var(--muted);font-size:13.5px;margin:2px 0 14px}
@@ -239,6 +243,10 @@
     .legend{left:462px;bottom:16px}
     .leaflet-bottom{bottom:0}
     .topbar{left:462px}
+    .sheet.float{left:auto;right:66px;top:calc(env(safe-area-inset-top) + 16px);bottom:auto;width:400px;max-width:none;margin:0;
+                 max-height:calc(100vh - 32px);border-radius:22px;border:1px solid var(--line);box-shadow:0 10px 50px rgba(0,0,0,.3);transform:translateX(calc(100% + 80px))}
+    .sheet.float.on{transform:none}
+    .sheet.float .grab{display:none}
   }
 </style>
 </head>
@@ -367,7 +375,7 @@
 </section>
 
 <div class="sheet-bg" id="sheetBg"></div>
-<div class="sheet" id="sheet"><div class="grab"></div><div id="sheetBody"></div></div>
+<div class="sheet" id="sheet"><button class="x" id="sheetX" type="button" aria-label="Cerrar">×</button><div class="grab"></div><div id="sheetBody"></div></div>
 <div class="toast" id="toast"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -583,9 +591,11 @@ function setSnap(sn) { panelSnap = sn; document.body.classList.toggle('snap-full
   window.addEventListener('resize', () => setSnap(panelSnap));
 })();
 function mapPad() {
-  const r = $('panel').getBoundingClientRect(), top = safeTop() + 70;
-  if (isWide()) return {paddingTopLeft: [r.right + 40, 60], paddingBottomRight: [70, 50]};
-  return {paddingTopLeft: [40, top], paddingBottomRight: [70, window.innerHeight - r.top + 30]};
+  const r = $('panel').getBoundingClientRect(), top = safeTop() + 70, s = $('sheet');
+  const sf = sheetFloat && s.classList.contains('on');   // la ficha flotante también tapa parte del mapa
+  if (isWide()) return {paddingTopLeft: [r.right + 40, 60], paddingBottomRight: [sf ? s.offsetWidth + 66 + 40 : 70, 50]};
+  const bottom = Math.max(window.innerHeight - r.top, sf ? s.offsetHeight : 0);
+  return {paddingTopLeft: [40, top], paddingBottomRight: [70, bottom + 30]};
 }
 function focusMap(pts, maxZoom = 7) {
   if (!pts.length) return;
@@ -817,9 +827,20 @@ $('fseg').querySelectorAll('button').forEach(b => b.onclick = () => {
 });
 
 // ------------------------------------------------------------------ hoja: avión
-function openSheet(html) { $('sheetBody').innerHTML = html; $('sheet').classList.add('on'); $('sheetBg').classList.add('on'); }
-function closeSheet() { $('sheet').classList.remove('on'); $('sheetBg').classList.remove('on'); openHex = null; drawMap(); }
+// float = ficha que deja el mapa libre (avión, vuelo); sin float = formulario con fondo oscuro
+let sheetFloat = false;
+function openSheet(html, float = false) {
+  sheetFloat = float;
+  $('sheetBody').innerHTML = html; $('sheet').scrollTop = 0;
+  $('sheet').classList.toggle('float', float); $('sheet').classList.add('on');
+  $('sheetBg').classList.toggle('on', !float);
+}
+const sheetOpen = () => $('sheet').classList.contains('on');
+function closeSheet() { $('sheet').classList.remove('on'); $('sheetBg').classList.remove('on'); sheetFloat = false; openHex = null; drawMap(); }
 $('sheetBg').onclick = closeSheet;
+$('sheetX').onclick = closeSheet;
+map.on('click', () => { if (sheetFloat && sheetOpen()) closeSheet(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheetOpen()) closeSheet(); });
 (() => { let y0 = null; const s = $('sheet');
   s.addEventListener('touchstart', e => { if (s.scrollTop <= 0) y0 = e.touches[0].clientY; }, {passive: true});
   s.addEventListener('touchmove', e => { if (y0 != null && e.touches[0].clientY - y0 > 80) { y0 = null; closeSheet(); } }, {passive: true});
@@ -829,9 +850,6 @@ async function openPlane(h) {
   const p = planeByHex(h); if (!p) return;
   openHex = h; drawMap();
   const isHer = h === herHex(), u = p.ultima, s = statusLine(p);
-  if (p.fase === 'aire' && u) focusMap([[u.lat, u.lon]], Math.max(map.getZoom(), 5));
-  else if (p.aeropuerto) focusMap([[p.aeropuerto.lat, p.aeropuerto.lon]], Math.max(map.getZoom(), 5));
-  const c = p.fase === 'aire' && u ? await nearCity(u.lat, u.lon) : null;
   openSheet(`
     <h3>${isHer ? '💛 ' : ''}${esc(p.matricula)}</h3>
     <div class="meta">${esc(p.modelo || p.tipo || '')}${p.callsign ? ' · ' + esc(p.callsign) : ''} · hex ${esc(p.hex)}</div>
@@ -840,7 +858,7 @@ async function openPlane(h) {
       <div class="stat"><b class="sm">${u && p.fase === 'aire' ? Math.round(u.alt).toLocaleString('es-ES') + ' ft' : '—'}</b><span>altitud</span></div>
       <div class="stat"><b class="sm">${u && p.fase === 'aire' ? Math.round(u.gs * 1.852) + ' km/h' : '—'}</b><span>velocidad</span></div>
     </div>
-    ${c ? `<p class="note">Ahora cerca de ${esc(c)}.</p>` : ''}
+    <p class="note" id="nearTxt" hidden></p>
     ${isHer ? `<div class="btn ghost" style="cursor:default">💛 ${esc(label())} va en este avión</div>`
             : `<button class="btn her" id="setHer" type="button">💛 ${esc(label())} va en este avión</button>`}
     <div class="links" style="margin-top:10px">
@@ -849,9 +867,15 @@ async function openPlane(h) {
       <a href="https://planefinder.net/data/aircraft/${esc(p.matricula)}" target="_blank" rel="noopener">Plane Finder</a>
     </div>
     <h2 style="margin-top:20px">Vuelos recientes de este avión</h2>
-    <div id="planeHist"><div class="empty">Cargando…</div></div>`);
+    <div id="planeHist"><div class="empty">Cargando…</div></div>`, true);
+  if (p.fase === 'aire' && u) focusMap([[u.lat, u.lon]], Math.max(map.getZoom(), 5));
+  else if (p.aeropuerto) focusMap([[p.aeropuerto.lat, p.aeropuerto.lon]], Math.max(map.getZoom(), 5));
+  if (p.fase === 'aire' && u) nearCity(u.lat, u.lon).then(c => {
+    const n = $('nearTxt'); if (c && n && openHex === h) { n.textContent = `Ahora cerca de ${c}.`; n.hidden = false; }
+  });
   const sb = $('setHer'); if (sb) sb.onclick = () => assignFromToday(p);
   if (!histFleet) histFleet = await loadData('historial_flota.json') || [];
+  if (openHex !== h) return;   // mientras cargaba se abrió otro avión
   const fs = histFleet.filter(f => f.hex === h).sort((a, b) => T(b.salida) - T(a.salida)).slice(0, 12);
   const herIds = new Set(herFlights().map(f => f.id));
   $('planeHist').innerHTML = fs.length ? fs.map(f => cardRow(f, {herMark: herIds.has(f.id)})).join('')
@@ -862,7 +886,7 @@ async function openPlane(h) {
 
 function openFlight(id) {
   const f = herFlights().find(x => x.id === id); if (!f) return;
-  selFlight = id; renderHerList(); drawMap(true);
+  selFlight = id; renderHerList();
   openSheet(`
     <h3>${code(f.origen)} → ${f.estado === 'en_vuelo' ? '…' : code(f.destino)}</h3>
     <div class="meta">${fDate.format(T(f.salida))} · ${esc(f.matricula)} · ${esc(f.modelo || '')}${f.callsign ? ' · ' + esc(f.callsign) : ''}</div>
@@ -872,7 +896,8 @@ function openFlight(id) {
       <div class="stat"><b class="sm">${f.estado === 'en_vuelo' ? dur((Date.now() - T(f.salida)) / 60000) : dur(f.duracion_min)}</b><span>${f.distancia_km ? f.distancia_km.toLocaleString('es-ES') + ' km' : 'duración'}</span></div>
     </div>
     <p class="note" style="margin-top:12px">${f.origen ? esc(f.origen.nombre) : 'Origen desconocido'} → ${f.destino ? esc(f.destino.nombre) : (f.estado === 'en_vuelo' ? 'en ruta' : 'destino desconocido')}${f.alt_max ? ` · altitud máx. ${f.alt_max.toLocaleString('es-ES')} ft` : ''}</p>
-    <button class="btn danger" id="notHers" type="button">No iba en este vuelo</button>`);
+    <button class="btn danger" id="notHers" type="button">No iba en este vuelo</button>`, true);
+  drawMap(true);
   $('notHers').onclick = () => toggleFlight(id, true);
 }
 
