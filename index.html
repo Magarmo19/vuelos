@@ -32,7 +32,7 @@
       --text:#0d1220; --muted:#5b6376; --dim:#8b92a4;
       --accent:#0a6cff; --accent2:#0a6cff; --her:#d99a00; --green:#139a64; --amber:#b86e00; --red:#d93636;
       --hero:linear-gradient(160deg,#ffffff 0%,#f3f6ff 100%); --hero-line:#dfe5f5;
-      --sheet:#ffffff; --nav:rgba(255,255,255,.86); --mapbg:#e9edf3; --glass:rgba(255,255,255,.92); --fact:#f2f4f9;
+      --sheet:#ffffff; --nav:rgba(255,255,255,.86); --mapbg:#c2c9cb; --glass:rgba(255,255,255,.92); --fact:#f2f4f9;
       --plane:#0a6cff; --plane-dim:#aab2c5; --stroke:#ffffff;
       --panel:rgba(255,255,255,.96); --pcard:#f3f4f8; --card2:#ffffff; --shadow:0 -10px 40px rgba(20,30,60,.18);
       color-scheme:light;
@@ -482,7 +482,14 @@ function herHex() {
 const herFlights = () => (her && her.vuelos || []).filter(f => !(assign.excluir_vuelos || []).includes(f.id));
 
 // ------------------------------------------------------------------ mapa
-const map = L.map('map', {zoomControl: false, worldCopyJump: true}).setView([44, 6], 4);
+// Sin bandas grises: no se puede alejar más de lo que mide el mapa en vertical ni salirse por arriba/abajo
+const map = L.map('map', {zoomControl: false, worldCopyJump: true, maxBounds: [[-85.05, -1e6], [85.05, 1e6]], maxBoundsViscosity: 1})
+  .setView([44, 6], 4);
+function fitMinZoom() {
+  const z = Math.ceil(Math.log2(Math.max(256, map.getSize().y) / 256));
+  map.setMinZoom(z); if (map.getZoom() < z) map.setZoom(z);
+}
+fitMinZoom(); map.on('resize', fitMinZoom);
 map.attributionControl.setPrefix('');
 // Mapa base: Stadia Maps — «Alidade Smooth» (plano y minimalista) en modo claro, «Alidade Smooth Dark» en modo oscuro. Si el dominio aún no está
 // autorizado en Stadia, cambia solo a OpenStreetMap para que nunca se quede sin mapa.
