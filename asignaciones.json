@@ -1,14 +1,6 @@
 {
   "etiqueta": "Judit",
-  "asignaciones": [
-    {
-      "matricula": "9H-VCG",
-      "hex": "4d20e9",
-      "desde": "2026-11-10",
-      "hasta": null,
-      "nota": ""
-    }
-  ],
+  "asignaciones": [],
   "incluir_vuelos": [],
   "excluir_vuelos": []
 }
