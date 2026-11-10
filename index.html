@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#070a14">
+<meta name="theme-color" content="#070a14" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f2f3f7" media="(prefers-color-scheme: light)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -19,6 +20,21 @@
     --text:#eef1fa; --muted:#8a93ad; --dim:#59627e;
     --accent:#4f9dff; --accent2:#7cc4ff; --her:#ffd166; --green:#3ad29f; --amber:#ffb547; --red:#ff6b6b;
     --r:20px; --tab:64px;
+    --hero:radial-gradient(120% 120% at 0% 0%,#22305e 0%,#121a33 45%,#10162a 100%); --hero-line:#2a3660;
+    --sheet:#0f1528; --nav:rgba(9,13,26,.88); --mapbg:#0b1020; --glass:rgba(16,22,42,.9); --fact:rgba(255,255,255,.045);
+    --plane:#7cc4ff; --plane-dim:#3a4567; --stroke:#0b1020;
+    color-scheme:dark;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f2f3f7; --card:#ffffff; --card2:#eef0f5; --line:#e2e5ee;
+      --text:#0d1220; --muted:#5b6376; --dim:#8b92a4;
+      --accent:#0a6cff; --accent2:#0a6cff; --her:#d99a00; --green:#139a64; --amber:#b86e00; --red:#d93636;
+      --hero:linear-gradient(160deg,#ffffff 0%,#f3f6ff 100%); --hero-line:#dfe5f5;
+      --sheet:#ffffff; --nav:rgba(255,255,255,.86); --mapbg:#e9edf3; --glass:rgba(255,255,255,.92); --fact:#f2f4f9;
+      --plane:#0a6cff; --plane-dim:#aab2c5; --stroke:#ffffff;
+      color-scheme:light;
+    }
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{background:var(--bg);color:var(--text);font:15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
@@ -37,7 +53,7 @@
   [hidden]{display:none!important}
 
   /* hero */
-  .hero{background:radial-gradient(120% 120% at 0% 0%,#22305e 0%,#121a33 45%,#10162a 100%);border-color:#2a3660}
+  .hero{background:var(--hero);border-color:var(--hero-line)}
   .who{display:flex;align-items:center;justify-content:space-between;gap:8px}
   .state{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
   .state.air{color:var(--green)} .state.ground{color:var(--accent2)} .state.unknown{color:var(--amber)}
@@ -49,7 +65,7 @@
   .mid{display:flex;flex-direction:column;align-items:center;color:var(--dim);font-size:11.5px;min-width:76px;gap:2px}
   .mid svg{width:64px;height:24px}
   .facts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
-  .fact{background:rgba(255,255,255,.045);border-radius:14px;padding:10px 12px}
+  .fact{background:var(--fact);border-radius:14px;padding:10px 12px}
   .fact b{display:block;font-size:16px;font-weight:720;white-space:nowrap}
   .fact span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
   .sub{color:var(--muted);font-size:13.5px;margin-top:12px}
@@ -57,20 +73,28 @@
   .noassign b{color:var(--text)}
 
   /* map */
-  #mapBox{position:relative}
-  #map{height:340px;border-radius:var(--r);border:1px solid var(--line);overflow:hidden;background:#0b1020}
+  #mapBox{position:relative;margin:0 -14px}
+  #map{height:min(48vh,460px);overflow:hidden;background:var(--mapbg)}
+  @media (min-width:789px){#mapBox{margin:0}#map{border-radius:var(--r);border:1px solid var(--line)}}
+  #mapBox + section{position:relative;z-index:600;margin-top:-40px;border-radius:26px;box-shadow:0 -6px 30px rgba(0,0,0,.18)}
+  .map-btns{top:12px!important}
+  .legend{bottom:52px!important}
+  .leaflet-bottom.leaflet-right{margin-bottom:40px}
   .map-btns{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;z-index:500}
-  .map-btns button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:rgba(16,22,42,.9);font-size:16px;cursor:pointer}
-  .leaflet-container{background:#0b1020;font:inherit}
+  .map-btns button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--glass);font-size:16px;cursor:pointer;color:var(--text)}
+  .leaflet-container{background:var(--mapbg);font:inherit}
   .dark-tiles{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.35)}
-  .leaflet-control-attribution{background:rgba(7,10,20,.7)!important;color:var(--dim)!important;font-size:9px}
+  .legend{position:absolute;left:10px;bottom:10px;z-index:500;background:var(--glass);border:1px solid var(--line);border-radius:10px;padding:6px 9px;font-size:10.5px;color:var(--muted)}
+  .legend i{display:block;width:150px;height:6px;border-radius:9px;margin-bottom:3px;background:linear-gradient(90deg,#34c759,#ffd60a,#ff9500,#ff453a,#bf5af2)}
+  .legend span{display:flex;justify-content:space-between}
+  .leaflet-control-attribution{background:var(--glass)!important;color:var(--dim)!important;font-size:9px}
   .leaflet-control-attribution a{color:var(--muted)!important}
   .pl{transition:transform .3s}
   .pl.her{filter:drop-shadow(0 0 7px rgba(255,209,102,.9))}
-  .ap-dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);border:2px solid #0b1020}
-  .gd{width:7px;height:7px;border-radius:50%;background:#59627e;border:1.5px solid #0b1020}
+  .ap-dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);border:2px solid var(--stroke)}
+  .gd{width:7px;height:7px;border-radius:50%;background:var(--dim);border:1.5px solid var(--stroke)}
   .gd.her{width:12px;height:12px;background:var(--her);box-shadow:0 0 0 4px rgba(255,209,102,.25)}
-  .tip{background:#10162a;color:var(--text);border:1px solid var(--line);border-radius:8px;font-weight:650;box-shadow:none;padding:2px 7px;font-size:11.5px}
+  .tip{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:8px;font-weight:650;box-shadow:none;padding:2px 7px;font-size:11.5px}
   .tip.her{border-color:var(--her);color:var(--her)}
   .tip:before{display:none}
 
@@ -100,6 +124,23 @@
   .fl .t{text-align:right;font-size:12.5px;color:var(--muted);white-space:nowrap}
   .fl .t b{color:var(--text);font-weight:620;display:block;font-size:13.5px}
   .fl.sel{background:rgba(79,157,255,.09);border-radius:12px}
+  .fv{display:grid;grid-template-columns:62px 1fr;gap:12px;align-items:center;padding:14px 2px;border-top:1px solid var(--line);cursor:pointer}
+  .month + .fv{border-top:0}
+  .fv.sel{background:rgba(79,157,255,.08);border-radius:14px}
+  .fv .lead{text-align:center}
+  .fv .lead b{display:block;font-size:30px;font-weight:760;letter-spacing:-.03em;line-height:1}
+  .fv .lead span{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+  .fv .lead.live b{color:var(--green)}
+  .fv .top{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--muted)}
+  .fv .top .st{font-weight:600}
+  .fv .top .st.ok{color:var(--green)} .fv .top .st.warn{color:var(--amber)}
+  .fv .rt{font-size:16.5px;font-weight:650;margin:2px 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fv .rt em{font-style:normal;font-weight:400;color:var(--muted)}
+  .fv .tm{display:flex;gap:14px;font-size:14px;font-weight:620;color:var(--green);flex-wrap:wrap}
+  .fv .tm .ap{display:inline-flex;align-items:center;gap:5px}
+  .fv .tm .ap.est{color:var(--muted)}
+  .fv .tm .ap i{font-style:normal;width:17px;height:17px;border-radius:50%;display:inline-grid;place-items:center;font-size:10px;color:#fff;background:var(--green)}
+  .fv .tm .ap.est i{background:var(--dim)}
   .tag{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:6px;background:rgba(255,181,71,.15);color:var(--amber);margin-left:6px;vertical-align:2px;font-weight:650}
   .tag.live{background:rgba(58,210,159,.15);color:var(--green)}
   .tag.her{background:rgba(255,209,102,.14);color:var(--her)}
@@ -151,7 +192,7 @@
   /* hoja inferior */
   .sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
   .sheet-bg.on{opacity:1;pointer-events:auto}
-  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:1001;background:#0f1528;border-top:1px solid var(--line);border-radius:22px 22px 0 0;
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:1001;background:var(--sheet);border-top:1px solid var(--line);border-radius:22px 22px 0 0;
          padding:10px 18px calc(env(safe-area-inset-bottom) + 18px);max-height:86vh;overflow-y:auto;transform:translateY(105%);transition:transform .25s ease;max-width:760px;margin:0 auto}
   .sheet.on{transform:none}
   .grab{width:40px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 12px}
@@ -159,14 +200,14 @@
   .sheet .meta{color:var(--muted);font-size:13.5px;margin:2px 0 14px}
 
   /* barra de pestañas */
-  nav{position:fixed;left:0;right:0;bottom:0;z-index:900;background:rgba(9,13,26,.88);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  nav{position:fixed;left:0;right:0;bottom:0;z-index:900;background:var(--nav);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
       border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);display:flex;justify-content:center}
   nav .in{display:grid;grid-template-columns:repeat(3,1fr);width:100%;max-width:520px;height:var(--tab)}
   nav button{background:none;border:0;color:var(--dim);font-size:11px;font-weight:600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer}
   nav button i{font-style:normal;font-size:21px;filter:grayscale(1) brightness(.8)}
   nav button.on{color:var(--text)}
   nav button.on i{filter:none}
-  .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + var(--tab) + 14px);transform:translateX(-50%) translateY(20px);background:#1d2645;border:1px solid var(--line);
+  .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + var(--tab) + 14px);transform:translateX(-50%) translateY(20px);background:#1d2645;color:#eef1fa;border:1px solid #2a3660;
          padding:10px 16px;border-radius:12px;font-size:14px;z-index:1100;opacity:0;transition:all .25s;pointer-events:none;max-width:90vw;text-align:center}
   .toast.on{opacity:1;transform:translateX(-50%)}
   footer{color:var(--dim);font-size:11.5px;text-align:center;padding:4px 10px;line-height:1.5}
@@ -178,6 +219,15 @@
     <h1 id="title">Vuelos</h1>
     <div class="chip" id="chip"><span class="dot"></span><span id="chipTxt">Cargando…</span></div>
   </header>
+
+  <div id="mapBox" data-view="ella flota">
+    <div id="map"></div>
+    <div class="legend" id="legend" hidden><i></i><span><b>0</b><b>10k</b><b>20k</b><b>30k</b><b>40k ft</b></span></div>
+    <div class="map-btns">
+      <button type="button" id="btnFit" title="Centrar">◎</button>
+      <button type="button" id="btnGround" title="Mostrar aviones en tierra" data-view="flota">●</button>
+    </div>
+  </div>
 
   <!-- ===================== ELLA ===================== -->
   <section class="card hero" data-view="ella" id="hero">
@@ -207,14 +257,6 @@
     <div class="stat"><b id="nGround">0</b><span>en tierra</span></div>
     <div class="stat"><b id="nAll">0</b><span>aviones vistos</span></div>
   </section>
-
-  <div id="mapBox" data-view="ella flota">
-    <div id="map"></div>
-    <div class="map-btns">
-      <button type="button" id="btnFit" title="Centrar">◎</button>
-      <button type="button" id="btnGround" title="Mostrar aviones en tierra" data-view="flota">●</button>
-    </div>
-  </div>
 
   <!-- ===================== ELLA (resto) ===================== -->
   <section class="card" data-view="ella">
@@ -399,10 +441,28 @@ const herFlights = () => (her && her.vuelos || []).filter(f => !(assign.excluir_
 // ------------------------------------------------------------------ mapa
 const map = L.map('map', {zoomControl: false, worldCopyJump: true}).setView([44, 6], 4);
 map.attributionControl.setPrefix('');
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 12, attribution: '© OpenStreetMap', className: 'dark-tiles'}).addTo(map);
+// Mapa base: Stadia Maps — relieve a color en modo claro, «Alidade Smooth Dark» en modo oscuro. Si el dominio aún no está
+// autorizado en Stadia, cambia solo a OpenStreetMap para que nunca se quede sin mapa.
+const darkMQ = window.matchMedia('(prefers-color-scheme: dark)');
+const isDark = () => darkMQ.matches;
+let baseLayer = null, mapFallback = false;
+function setBaseLayer() {
+  if (baseLayer) map.removeLayer(baseLayer);
+  if (!mapFallback) {
+    let errs = 0;
+    baseLayer = L.tileLayer(`https://tiles.stadiamaps.com/tiles/${isDark() ? 'alidade_smooth_dark' : 'stamen_terrain'}/{z}/{x}/{y}{r}.png`, {
+      maxZoom: 12, attribution: '© <a href="https://stadiamaps.com/">Stadia Maps</a>' + (isDark() ? '' : ' © <a href="https://stamen.com/">Stamen Design</a>') + ' © <a href="https://openmaptiles.org/">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'});
+    baseLayer.on('tileerror', () => { if (++errs >= 3 && !mapFallback) { mapFallback = true; setBaseLayer(); } });
+  } else {
+    baseLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 12, attribution: '© OpenStreetMap', className: isDark() ? 'dark-tiles' : ''});
+  }
+  baseLayer.addTo(map); baseLayer.bringToBack();
+}
+setBaseLayer();
+darkMQ.addEventListener ? darkMQ.addEventListener('change', () => { setBaseLayer(); drawMap(); }) : darkMQ.addListener(() => { setBaseLayer(); drawMap(); });
 const layer = L.layerGroup().addTo(map);
 const planeSvg = (deg, color, size, cls) => L.divIcon({className: '', iconSize: [size, size], iconAnchor: [size/2, size/2], html:
-  `<svg class="pl ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" style="transform:rotate(${deg}deg)"><path fill="${color}" stroke="#0b1020" stroke-width=".6" d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>`});
+  `<svg class="pl ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" style="transform:rotate(${deg}deg)"><path fill="${color}" stroke="${isDark() ? '#0b1020' : '#ffffff'}" stroke-width=".7" d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>`});
 const dotIcon = cls => L.divIcon({className: '', iconSize: [12, 12], iconAnchor: [6, 6], html: `<div class="${cls}"></div>`});
 
 function gc(a, b, n = 48) {
@@ -417,6 +477,32 @@ function gc(a, b, n = 48) {
   }
   return out;
 }
+const ALT_STOPS = [[0, [52, 199, 89]], [10000, [255, 214, 10]], [20000, [255, 149, 0]], [30000, [255, 69, 58]], [40000, [191, 90, 242]]];
+function altColor(a) {
+  a = Math.max(0, Math.min(a || 0, 40000));
+  for (let i = 1; i < ALT_STOPS.length; i++) {
+    const [a1, c1] = ALT_STOPS[i], [a0, c0] = ALT_STOPS[i - 1];
+    if (a <= a1) { const f = (a - a0) / (a1 - a0); return `rgb(${c0.map((v, k) => Math.round(v + (c1[k] - v) * f)).join(',')})`; }
+  }
+  return 'rgb(191,90,242)';
+}
+let legendOn = false;
+// Dibuja una trayectoria [[lat,lon,alt],...] coloreando cada tramo según la altitud.
+function drawTrail(pts, weight = 3.5) {
+  if (!pts || pts.length < 2) return;
+  L.polyline(pts.map(p => [p[0], p[1]]), {color: isDark() ? '#000' : '#fff', weight: weight + 2.5, opacity: isDark() ? .35 : .7, interactive: false}).addTo(layer);
+  for (let i = 0; i < pts.length - 1; i++) {
+    L.polyline([[pts[i][0], pts[i][1]], [pts[i + 1][0], pts[i + 1][1]]],
+      {color: altColor(((pts[i][2] || 0) + (pts[i + 1][2] || 0)) / 2), weight, opacity: 1, lineCap: 'round', interactive: false}).addTo(layer);
+  }
+  legendOn = true;
+}
+function trackWithEnds(f, track) {
+  const pts = track.map(p => [p[0], p[1], p[2] || 0]);
+  if (f.origen) pts.unshift([f.origen.lat, f.origen.lon, 0]);
+  if (f.destino && f.estado !== 'en_vuelo') pts.push([f.destino.lat, f.destino.lon, 0]);
+  return pts;
+}
 function flightPath(f) {
   let pts = f.track && f.track.length > 2 ? f.track.map(p => [p[0], p[1]]) : null;
   if (!pts) return f.origen && f.destino ? gc([f.origen.lat, f.origen.lon], [f.destino.lat, f.destino.lon]) : null;
@@ -427,7 +513,8 @@ function flightPath(f) {
 
 function drawMap(refit) {
   layer.clearLayers();
-  if (!fleet) return;
+  legendOn = false;
+  if (!fleet) { $('legend').hidden = true; return; }
   const hh = herHex(), bounds = [], aps = new Map();
   if (view === 'ella') {
     herFlights().forEach(f => {
@@ -435,8 +522,9 @@ function drawMap(refit) {
       const pts = flightPath(f); if (!pts) return;
       const live = f.estado === 'en_vuelo', sel = selFlight === f.id;
       [f.origen, f.destino].forEach(a => a && aps.set(a.icao, a));
-      L.polyline(pts, {color: live ? '#3ad29f' : sel ? '#ffd166' : '#4f9dff', weight: live || sel ? 3 : 1.4,
-        opacity: live || sel ? .95 : .25, dashArray: f.destino_aprox && !sel ? '4 6' : null}).addTo(layer);
+      if ((sel || live) && f.track && f.track.length > 2) drawTrail(trackWithEnds(f, f.track));
+      else L.polyline(pts, {color: sel ? 'var(--her)' : 'var(--accent)', weight: sel ? 3 : 1.4,
+        opacity: sel ? .95 : .28, dashArray: f.destino_aprox && !sel ? '4 6' : null}).addTo(layer);
       if (sel || live) bounds.push(...pts);
     });
     aps.forEach(a => L.marker([a.lat, a.lon], {icon: dotIcon('ap-dot')})
@@ -448,17 +536,18 @@ function drawMap(refit) {
     if (p.fase === 'aire' && u) {
       if (view === 'flota' || isHer) {
         if (p.vuelo && p.vuelo.track && (isHer || openHex === p.hex)) {
-          const pts = p.vuelo.track.map(x => [x[0], x[1]]);
-          if (p.vuelo.origen) pts.unshift([p.vuelo.origen.lat, p.vuelo.origen.lon]);
-          L.polyline(pts, {color: isHer ? '#ffd166' : '#7cc4ff', weight: 2.5, opacity: .9}).addTo(layer);
-          if (isHer && view === 'ella') bounds.push(...pts);
+          const pts = trackWithEnds(p.vuelo, p.vuelo.track);
+          if (u) pts.push([u.lat, u.lon, u.alt]);
+          drawTrail(pts, isHer ? 4 : 3);
+          if (isHer && view === 'ella') bounds.push(...pts.map(x => [x[0], x[1]]));
         }
-        const m = L.marker([u.lat, u.lon], {icon: planeSvg(u.trk || 0, isHer ? '#ffd166' : (view === 'flota' ? '#7cc4ff' : '#59627e'), isHer ? 34 : 22, isHer ? 'her' : ''), zIndexOffset: isHer ? 1000 : 0}).addTo(layer);
+        const css = getComputedStyle(document.documentElement);
+        const m = L.marker([u.lat, u.lon], {icon: planeSvg(u.trk || 0, isHer ? css.getPropertyValue('--her').trim() : (view === 'flota' ? css.getPropertyValue('--plane').trim() : css.getPropertyValue('--plane-dim').trim()), isHer ? 34 : 22, isHer ? 'her' : ''), zIndexOffset: isHer ? 1000 : 0}).addTo(layer);
         if (isHer) m.bindTooltip(`💛 ${esc(label())}`, {permanent: true, direction: 'right', offset: [14, 0], className: 'tip her'});
         m.on('click', () => openPlane(p.hex));
         if (isHer && view === 'ella') bounds.push([u.lat, u.lon]);
       } else if (view === 'ella') {
-        L.marker([u.lat, u.lon], {icon: planeSvg(u.trk || 0, '#3a4567', 16, ''), interactive: false}).addTo(layer);
+        L.marker([u.lat, u.lon], {icon: planeSvg(u.trk || 0, getComputedStyle(document.documentElement).getPropertyValue('--plane-dim').trim(), 16, ''), interactive: false}).addTo(layer);
       }
       if (view === 'flota') bounds.push([u.lat, u.lon]);
     } else if (p.aeropuerto && ((view === 'flota' && showGround) || isHer)) {
@@ -467,6 +556,7 @@ function drawMap(refit) {
       m.on('click', () => openPlane(p.hex));
     }
   });
+  $('legend').hidden = !legendOn;
   if (refit || !fitted[view]) {
     fitted[view] = true;
     if (bounds.length > 1) map.fitBounds(bounds, {padding: [40, 40], maxZoom: 7});
@@ -566,6 +656,23 @@ function renderStats() {
     + [...cs].filter(Boolean).map(c => `<span>${flag(c)} ${esc(country(c))}</span>`).join('');
 }
 
+function cardRow(f, opts = {}) {
+  const t = T(f.salida), live = f.estado === 'en_vuelo';
+  const o = f.origen, d = f.destino;
+  let lead;
+  if (live) { const m = (Date.now() - t) / 60000; lead = `<div class="lead live"><b>${m >= 60 ? Math.floor(m / 60) + 'h' : Math.round(m)}</b><span>${m >= 60 ? Math.round(m % 60) + ' min' : 'min'}<br>en vuelo</span></div>`; }
+  else lead = `<div class="lead"><b>${fDay.format(t)}</b><span>${fWd.format(t).replace('.', '')}</span></div>`;
+  const st = live ? '<span class="st ok">● En vuelo</span>' : f.estado === 'sin_senal' ? '<span class="st warn">Sin señal</span>'
+    : f.destino_aprox ? '<span class="st warn">Destino aprox.</span>' : `<span class="st">${dur(f.duracion_min)}${f.distancia_km ? ' · ' + f.distancia_km.toLocaleString('es-ES') + ' km' : ''}</span>`;
+  const herTag = opts.herMark ? ' 💛' : '';
+  const ap = (a, time, est, arrow) => `<span class="ap${est || !time ? ' est' : ''}"><i>${arrow}</i>${esc(code(a))} ${time ? fTime.format(time) : '—'}</span>`;
+  return `<div class="fv${selFlight === f.id ? ' sel' : ''}" data-id="${esc(f.id)}">${lead}
+    <div style="min-width:0">
+      <div class="top"><span>${esc(f.matricula)}${f.callsign ? ' · ' + esc(f.callsign) : ''}${herTag}</span>${st}</div>
+      <div class="rt">${esc(cityOf(o) || 'Origen desconocido')} <em>a</em> ${esc(live ? 'en ruta…' : cityOf(d) || 'destino desconocido')}</div>
+      <div class="tm">${ap(o, t, f.salida_aprox, '↗')}${live ? '' : ap(d, T(f.llegada), f.llegada_aprox, '↘')}</div>
+    </div></div>`;
+}
 function flightRow(f, opts = {}) {
   const t = T(f.salida), live = f.estado === 'en_vuelo';
   const tag = live ? '<span class="tag live">EN VUELO</span>' : f.estado === 'sin_senal' ? '<span class="tag">SIN SEÑAL</span>'
@@ -590,11 +697,11 @@ function renderHerList() {
   fs.slice(0, herLimit).forEach(f => {
     const m = fMonth.format(T(f.salida));
     if (m !== cur) { html += `<div class="month">${m}</div>`; cur = m; }
-    html += flightRow(f, {plane: true});
+    html += cardRow(f);
   });
   if (fs.length > herLimit) html += `<button class="more" id="moreHer" type="button">Ver más</button>`;
   $('herList').innerHTML = html;
-  $('herList').querySelectorAll('.fl').forEach(el => el.onclick = () => openFlight(el.dataset.id));
+  $('herList').querySelectorAll('.fv').forEach(el => el.onclick = () => openFlight(el.dataset.id));
   const mb = $('moreHer'); if (mb) mb.onclick = () => { herLimit += 60; renderHerList(); };
 }
 
@@ -667,10 +774,10 @@ async function openPlane(h) {
   if (!histFleet) histFleet = await loadData('historial_flota.json') || [];
   const fs = histFleet.filter(f => f.hex === h).sort((a, b) => T(b.salida) - T(a.salida)).slice(0, 12);
   const herIds = new Set(herFlights().map(f => f.id));
-  $('planeHist').innerHTML = fs.length ? fs.map(f => flightRow(f, {herMark: herIds.has(f.id)})).join('')
+  $('planeHist').innerHTML = fs.length ? fs.map(f => cardRow(f, {herMark: herIds.has(f.id)})).join('')
     + `<p class="note" style="margin-top:10px">Toca un vuelo para marcarlo o desmarcarlo como suyo.</p>`
     : '<div class="empty">Sin vuelos registrados en los últimos días.</div>';
-  $('planeHist').querySelectorAll('.fl').forEach(el => el.onclick = () => toggleFlight(el.dataset.id, herIds.has(el.dataset.id)));
+  $('planeHist').querySelectorAll('.fv').forEach(el => el.onclick = () => toggleFlight(el.dataset.id, herIds.has(el.dataset.id)));
 }
 
 function openFlight(id) {
@@ -782,7 +889,7 @@ function renderSettings() {
   const base = location.href.replace(/[#?].*$/, '').replace(/index\.html$/, '').replace(/\/?$/, '/');
   const ics = base + 'data/vuelos.ics';
   $('calBtn').href = ics.replace(/^https?:/, 'webcal:'); $('calUrl').textContent = ics;
-  $('dataInfo').innerHTML = fleet ? `Flota actualizada ${ago(T(fleet.actualizado))} (${fTime.format(T(fleet.actualizado))}). ${fleet.aviones.length} aviones de ${esc(fleet.operador || 'la flota')} identificados hasta ahora; la lista crece sola a medida que vuelan.<br>El rastreador consulta cada minuto mientras está activo y GitHub lo lanza cada ~5 min.`
+  $('dataInfo').innerHTML = fleet ? `Flota actualizada ${ago(T(fleet.actualizado))} (${fTime.format(T(fleet.actualizado))}). ${fleet.aviones.length} aviones de ${esc(fleet.operador || 'la flota')} identificados hasta ahora; la lista crece sola a medida que vuelan.<br>El rastreador consulta cada minuto mientras está activo y GitHub lo lanza cada ~5 min.<br>Mapa: ${mapFallback ? 'alternativo (OpenStreetMap). Para el mapa bueno, autoriza este dominio en Stadia Maps.' : 'Stadia Maps ✓'}`
     : 'Sin datos todavía.';
 }
 $('tokSave').onclick = async () => {
