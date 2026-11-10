@@ -445,20 +445,30 @@ map.attributionControl.setPrefix('');
 // autorizado en Stadia, cambia solo a OpenStreetMap para que nunca se quede sin mapa.
 const darkMQ = window.matchMedia('(prefers-color-scheme: dark)');
 const isDark = () => darkMQ.matches;
-let baseLayer = null, mapFallback = false;
+let baseLayer = null, mapFallback = false, mapReason = '', STADIA_KEY = '';
+const stadiaUrl = style => `https://tiles.stadiamaps.com/tiles/${style}/{z}/{x}/{y}{r}.png${STADIA_KEY ? '?api_key=' + encodeURIComponent(STADIA_KEY) : ''}`;
+// Stadia devuelve el error 401 como una imagen, así que se comprueba antes con una petición de prueba.
+async function probeStadia() {
+  try {
+    const u = stadiaUrl('stamen_terrain').replace('{z}/{x}/{y}{r}', '0/0/0');
+    const r = await fetch(u + (u.includes('?') ? '&' : '?') + 't=' + Date.now(), {cache: 'no-store'});
+    if (r.status === 401 || r.status === 403) { mapFallback = true; mapReason = `Stadia respondió ${r.status}: el dominio no está autorizado (o la clave no es válida).`; setBaseLayer(); }
+  } catch (e) { /* sin respuesta legible: se deja Stadia y actúa el control de errores de teselas */ }
+}
 function setBaseLayer() {
   if (baseLayer) map.removeLayer(baseLayer);
   if (!mapFallback) {
     let errs = 0;
-    baseLayer = L.tileLayer(`https://tiles.stadiamaps.com/tiles/${isDark() ? 'alidade_smooth_dark' : 'stamen_terrain'}/{z}/{x}/{y}{r}.png`, {
+    baseLayer = L.tileLayer(stadiaUrl(isDark() ? 'alidade_smooth_dark' : 'stamen_terrain'), {
       maxZoom: 12, attribution: '© <a href="https://stadiamaps.com/">Stadia Maps</a>' + (isDark() ? '' : ' © <a href="https://stamen.com/">Stamen Design</a>') + ' © <a href="https://openmaptiles.org/">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'});
-    baseLayer.on('tileerror', () => { if (++errs >= 3 && !mapFallback) { mapFallback = true; setBaseLayer(); } });
+    baseLayer.on('tileerror', () => { if (++errs >= 3 && !mapFallback) { mapFallback = true; mapReason = 'Las teselas de Stadia no cargan.'; setBaseLayer(); } });
   } else {
     baseLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 12, attribution: '© OpenStreetMap', className: isDark() ? 'dark-tiles' : ''});
   }
   baseLayer.addTo(map); baseLayer.bringToBack();
 }
-setBaseLayer();
+fetch('config.json?t=' + Date.now(), {cache: 'no-store'}).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+  .then(c => { STADIA_KEY = (c && c.mapa && c.mapa.stadia_api_key) || ''; setBaseLayer(); probeStadia(); });
 darkMQ.addEventListener ? darkMQ.addEventListener('change', () => { setBaseLayer(); drawMap(); }) : darkMQ.addListener(() => { setBaseLayer(); drawMap(); });
 const layer = L.layerGroup().addTo(map);
 const planeSvg = (deg, color, size, cls) => L.divIcon({className: '', iconSize: [size, size], iconAnchor: [size/2, size/2], html:
@@ -889,7 +899,7 @@ function renderSettings() {
   const base = location.href.replace(/[#?].*$/, '').replace(/index\.html$/, '').replace(/\/?$/, '/');
   const ics = base + 'data/vuelos.ics';
   $('calBtn').href = ics.replace(/^https?:/, 'webcal:'); $('calUrl').textContent = ics;
-  $('dataInfo').innerHTML = fleet ? `Flota actualizada ${ago(T(fleet.actualizado))} (${fTime.format(T(fleet.actualizado))}). ${fleet.aviones.length} aviones de ${esc(fleet.operador || 'la flota')} identificados hasta ahora; la lista crece sola a medida que vuelan.<br>El rastreador consulta cada minuto mientras está activo y GitHub lo lanza cada ~5 min.<br>Mapa: ${mapFallback ? 'alternativo (OpenStreetMap). Para el mapa bueno, autoriza este dominio en Stadia Maps.' : 'Stadia Maps ✓'}`
+  $('dataInfo').innerHTML = fleet ? `Flota actualizada ${ago(T(fleet.actualizado))} (${fTime.format(T(fleet.actualizado))}). ${fleet.aviones.length} aviones de ${esc(fleet.operador || 'la flota')} identificados hasta ahora; la lista crece sola a medida que vuelan.<br>El rastreador consulta cada minuto mientras está activo y GitHub lo lanza cada ~5 min.<br>Mapa: ${mapFallback ? 'alternativo (OpenStreetMap). ' + esc(mapReason) : 'Stadia Maps ✓' + (STADIA_KEY ? ' (con clave)' : ' (dominio)')}`
     : 'Sin datos todavía.';
 }
 $('tokSave').onclick = async () => {
