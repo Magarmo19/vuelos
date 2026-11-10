@@ -806,7 +806,7 @@ function renderFleet() {
   $('fleetList').innerHTML = list.length ? list.map(p => {
     const s = statusLine(p), isHer = p.hex === hh;
     return `<div class="ac" data-h="${p.hex}"><div class="ic ${isHer ? 'her' : p.fase === 'aire' ? 'air' : ''}">${isHer ? '💛' : p.fase === 'aire' ? '✈️' : '·'}</div>
-      <div style="min-width:0"><div class="n">${esc(p.matricula)}<small>${esc(p.modelo || '')}</small></div><div class="s">${esc(s.s)}</div></div>
+      <div style="min-width:0"><div class="n">${esc(p.matricula)}${p.fase === 'aire' && p.callsign ? ' · ' + esc(p.callsign) : ''}<small>${esc(p.modelo || '')}</small></div><div class="s">${esc(s.s)}</div></div>
       <div class="x">${s.x}</div></div>`;
   }).join('') : `<div class="empty">${q ? 'Nada coincide con la búsqueda.' : fFilter === 'air' ? 'Ningún avión de la flota en el aire ahora mismo.' : 'Sin aviones.'}</div>`;
   $('fleetList').querySelectorAll('.ac').forEach(el => el.onclick = () => openPlane(el.dataset.h));
