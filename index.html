@@ -23,6 +23,7 @@
     --hero:radial-gradient(120% 120% at 0% 0%,#22305e 0%,#121a33 45%,#10162a 100%); --hero-line:#2a3660;
     --sheet:#0f1528; --nav:rgba(9,13,26,.88); --mapbg:#0b1020; --glass:rgba(16,22,42,.9); --fact:rgba(255,255,255,.045);
     --plane:#7cc4ff; --plane-dim:#3a4567; --stroke:#0b1020;
+    --panel:rgba(12,17,32,.94); --pcard:#141b31; --card2:#1a2340; --shadow:0 -10px 40px rgba(0,0,0,.45);
     color-scheme:dark;
   }
   @media (prefers-color-scheme: light){
@@ -33,14 +34,15 @@
       --hero:linear-gradient(160deg,#ffffff 0%,#f3f6ff 100%); --hero-line:#dfe5f5;
       --sheet:#ffffff; --nav:rgba(255,255,255,.86); --mapbg:#e9edf3; --glass:rgba(255,255,255,.92); --fact:#f2f4f9;
       --plane:#0a6cff; --plane-dim:#aab2c5; --stroke:#ffffff;
+      --panel:rgba(255,255,255,.96); --pcard:#f3f4f8; --card2:#ffffff; --shadow:0 -10px 40px rgba(20,30,60,.18);
       color-scheme:light;
     }
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{background:var(--bg);color:var(--text);font:15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
-  body{padding:calc(env(safe-area-inset-top) + 12px) 14px calc(env(safe-area-inset-bottom) + var(--tab) + 24px)}
+  html,body{height:100%;overflow:hidden;overscroll-behavior:none}
   button,input,select{font:inherit;color:inherit}
-  .wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+  .wrap{display:flex;flex-direction:column;gap:12px}
   header{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 0}
   h1{font-size:25px;font-weight:760;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;margin-right:10px}
   .chip{font-size:12px;color:var(--muted);background:var(--card);border:1px solid var(--line);padding:5px 10px;border-radius:99px;white-space:nowrap}
@@ -73,13 +75,6 @@
   .noassign b{color:var(--text)}
 
   /* map */
-  #mapBox{position:relative;margin:0 -14px}
-  #map{height:min(48vh,460px);overflow:hidden;background:var(--mapbg)}
-  @media (min-width:789px){#mapBox{margin:0}#map{border-radius:var(--r);border:1px solid var(--line)}}
-  #mapBox + section{position:relative;z-index:600;margin-top:-40px;border-radius:26px;box-shadow:0 -6px 30px rgba(0,0,0,.18)}
-  .map-btns{top:12px!important}
-  .legend{bottom:52px!important}
-  .leaflet-bottom.leaflet-right{margin-bottom:40px}
   .map-btns{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;z-index:500}
   .map-btns button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--glass);font-size:16px;cursor:pointer;color:var(--text)}
   .leaflet-container{background:var(--mapbg);font:inherit}
@@ -211,24 +206,64 @@
          padding:10px 16px;border-radius:12px;font-size:14px;z-index:1100;opacity:0;transition:all .25s;pointer-events:none;max-width:90vw;text-align:center}
   .toast.on{opacity:1;transform:translateX(-50%)}
   footer{color:var(--dim);font-size:11.5px;text-align:center;padding:4px 10px;line-height:1.5}
+
+  /* ===== maqueta: mapa a pantalla completa con panel encima ===== */
+  #map{position:fixed;inset:0;z-index:0;background:var(--mapbg)}
+  .topbar{position:fixed;z-index:700;top:calc(env(safe-area-inset-top) + 10px);left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none}
+  .topbar > *{pointer-events:auto}
+  .topbar .chip{background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 2px 12px rgba(0,0,0,.15);font-weight:600}
+  .map-btns{position:static;display:flex;flex-direction:column;gap:8px}
+  .map-btns button{width:42px;height:42px;border-radius:50%;border:0;background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 2px 12px rgba(0,0,0,.18);font-size:17px;cursor:pointer;color:var(--text)}
+  .legend{position:fixed;z-index:650;left:12px;bottom:calc(var(--ph,58vh) + 12px);transition:bottom .28s ease;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+  .leaflet-bottom{bottom:var(--ph,58vh);transition:bottom .28s ease}
+  .panel{position:fixed;z-index:800;left:0;right:0;bottom:0;height:58vh;display:flex;flex-direction:column;background:var(--panel);
+         backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:28px 28px 0 0;box-shadow:var(--shadow);transition:height .28s ease}
+  .panel.dragging{transition:none}
+  .snap-full .legend,.snap-full .map-btns,.snap-full .leaflet-control-attribution{opacity:0;pointer-events:none}
+  .panel-head{padding:8px 16px 10px;touch-action:none;cursor:grab;flex:none}
+  .panel-head .grab{width:40px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 10px}
+  .ph-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+  .ph-row h1{font-size:27px}
+  .tabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
+  .tabs button{border:0;background:none;border-radius:9px;padding:7px 4px;font-weight:620;font-size:14px;color:var(--muted);cursor:pointer}
+  .tabs button.on{background:var(--accent);color:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+  .panel-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 14px calc(env(safe-area-inset-bottom) + 28px);overscroll-behavior:contain}
+  .panel .card{background:var(--pcard);border-color:transparent}
+  .panel .hero{background:var(--hero);border:1px solid var(--hero-line)}
+  .toast{top:calc(env(safe-area-inset-top) + 64px);bottom:auto!important;transform:translateX(-50%) translateY(-12px)}
+  .toast.on{transform:translateX(-50%)}
+  @media (min-width:820px){
+    .panel{top:16px;left:16px;bottom:16px;right:auto;width:430px;height:auto!important;border-radius:24px;box-shadow:0 10px 50px rgba(0,0,0,.3)}
+    .panel-head .grab{display:none}
+    .panel-head{cursor:default;padding-top:16px}
+    .legend{left:462px;bottom:16px}
+    .leaflet-bottom{bottom:0}
+    .topbar{left:462px}
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <h1 id="title">Vuelos</h1>
-    <div class="chip" id="chip"><span class="dot"></span><span id="chipTxt">Cargando…</span></div>
-  </header>
+<div id="map"></div>
+<div class="topbar">
+  <div class="chip" id="chip"><span class="dot"></span><span id="chipTxt">Cargando…</span></div>
+  <div class="map-btns">
+    <button type="button" id="btnFit" title="Centrar" aria-label="Centrar mapa">◎</button>
+    <button type="button" id="btnGround" title="Mostrar aviones en tierra" aria-label="Aviones en tierra" data-view="flota">●</button>
+  </div>
+</div>
+<div class="legend" id="legend" hidden><i></i><span><b>0</b><b>10k</b><b>20k</b><b>30k</b><b>40k ft</b></span></div>
 
-  <div id="mapBox" data-view="ella flota">
-    <div id="map"></div>
-    <div class="legend" id="legend" hidden><i></i><span><b>0</b><b>10k</b><b>20k</b><b>30k</b><b>40k ft</b></span></div>
-    <div class="map-btns">
-      <button type="button" id="btnFit" title="Centrar">◎</button>
-      <button type="button" id="btnGround" title="Mostrar aviones en tierra" data-view="flota">●</button>
+<section class="panel" id="panel">
+  <div class="panel-head" id="panelHead">
+    <div class="grab" id="grab"></div>
+    <div class="ph-row"><h1 id="title">Vuelos</h1></div>
+    <div class="tabs" id="tabs">
+      <button type="button" data-tab="ella" class="on"><span id="tabElla">Ella</span></button>
+      <button type="button" data-tab="flota">Flota</button>
+      <button type="button" data-tab="ajustes">Ajustes</button>
     </div>
   </div>
-
+  <div class="panel-body" id="panelBody"><div class="wrap">
   <!-- ===================== ELLA ===================== -->
   <section class="card hero" data-view="ella" id="hero">
     <div class="who"><div class="state" id="state">—</div><div class="plane-tag" id="planeTag" hidden></div></div>
@@ -258,6 +293,11 @@
     <div class="stat"><b id="nAll">0</b><span>aviones vistos</span></div>
   </section>
 
+  <section class="card" data-view="ella">
+    <h2>Sus vuelos <button type="button" id="goAssign">Asignaciones</button></h2>
+    <div id="herList"><div class="empty">Cargando…</div></div>
+  </section>
+
   <!-- ===================== ELLA (resto) ===================== -->
   <section class="card" data-view="ella">
     <h2>Estadísticas</h2>
@@ -275,11 +315,6 @@
       <div class="stat"><b id="sL" class="sm">—</b><span>vuelo más largo</span></div>
     </div>
     <div class="pills" id="pills"></div>
-  </section>
-
-  <section class="card" data-view="ella">
-    <h2>Sus vuelos <button type="button" id="goAssign">Asignaciones</button></h2>
-    <div id="herList"><div class="empty">Cargando…</div></div>
   </section>
 
   <!-- ===================== FLOTA (lista) ===================== -->
@@ -328,13 +363,8 @@
   </section>
 
   <footer data-view="ella flota ajustes">Datos ADS-B públicos de adsb.lol, airplanes.live y adsb.fi · Horas de Madrid · «~» = hora estimada · No afiliado a ninguna aerolínea.</footer>
-</div>
-
-<nav><div class="in">
-  <button type="button" data-tab="ella" class="on"><i>💛</i><span id="tabElla">Ella</span></button>
-  <button type="button" data-tab="flota"><i>✈️</i>Flota</button>
-  <button type="button" data-tab="ajustes"><i>⚙️</i>Ajustes</button>
-</div></nav>
+  </div></div>
+</section>
 
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"><div class="grab"></div><div id="sheetBody"></div></div>
@@ -521,6 +551,47 @@ function flightPath(f) {
   return pts;
 }
 
+// ---------- panel inferior arrastrable (en móvil) y encuadre del mapa
+const isWide = () => window.innerWidth >= 820;
+let panelSnap = 'mid';
+function safeTop() { const d = document.createElement('div'); d.style.cssText = 'position:fixed;top:0;height:env(safe-area-inset-top)'; document.body.appendChild(d); const h = d.offsetHeight; d.remove(); return h; }
+function snapHeights() { const H = window.innerHeight; return {peek: Math.round(H * .3), mid: Math.round(H * .56), full: H - safeTop() - 78}; }
+function setPanelH(h) { if (isWide()) { $('panel').style.height = ''; document.documentElement.style.setProperty('--ph', '0px'); return; }
+  $('panel').style.height = h + 'px'; document.documentElement.style.setProperty('--ph', h + 'px'); }
+function setSnap(sn) { panelSnap = sn; document.body.classList.toggle('snap-full', sn === 'full' && !isWide()); setPanelH(snapHeights()[sn]); }
+(() => {
+  const head = $('panelHead'), panel = $('panel');
+  let y0 = null, h0 = 0, moved = false;
+  head.addEventListener('pointerdown', e => {
+    if (isWide() || e.target.closest('button')) return;
+    y0 = e.clientY; h0 = panel.getBoundingClientRect().height; moved = false;
+    panel.classList.add('dragging'); head.setPointerCapture(e.pointerId);
+  });
+  head.addEventListener('pointermove', e => {
+    if (y0 == null) return;
+    const dy = y0 - e.clientY; if (Math.abs(dy) > 4) moved = true;
+    const sh = snapHeights(); setPanelH(Math.max(sh.peek * .7, Math.min(sh.full, h0 + dy)));
+  });
+  const end = () => {
+    if (y0 == null) return;
+    panel.classList.remove('dragging'); y0 = null;
+    const h = panel.getBoundingClientRect().height, sh = snapHeights();
+    if (!moved) { setSnap(panelSnap === 'peek' ? 'mid' : panelSnap === 'mid' ? 'full' : 'peek'); return; }
+    setSnap(Object.entries(sh).sort((a, b) => Math.abs(a[1] - h) - Math.abs(b[1] - h))[0][0]);
+  };
+  head.addEventListener('pointerup', end); head.addEventListener('pointercancel', end);
+  window.addEventListener('resize', () => setSnap(panelSnap));
+})();
+function mapPad() {
+  const r = $('panel').getBoundingClientRect(), top = safeTop() + 70;
+  if (isWide()) return {paddingTopLeft: [r.right + 40, 60], paddingBottomRight: [70, 50]};
+  return {paddingTopLeft: [40, top], paddingBottomRight: [70, window.innerHeight - r.top + 30]};
+}
+function focusMap(pts, maxZoom = 7) {
+  if (!pts.length) return;
+  map.fitBounds(pts.length === 1 ? [pts[0], pts[0]] : pts, Object.assign({maxZoom}, mapPad()));
+}
+
 function drawMap(refit) {
   layer.clearLayers();
   legendOn = false;
@@ -569,9 +640,8 @@ function drawMap(refit) {
   $('legend').hidden = !legendOn;
   if (refit || !fitted[view]) {
     fitted[view] = true;
-    if (bounds.length > 1) map.fitBounds(bounds, {padding: [40, 40], maxZoom: 7});
-    else if (bounds.length === 1) map.setView(bounds[0], 6);
-    else if (aps.size) map.fitBounds([...aps.values()].map(a => [a.lat, a.lon]), {padding: [30, 30], maxZoom: 6});
+    if (bounds.length) focusMap(bounds, bounds.length === 1 ? 6 : 7);
+    else if (aps.size) focusMap([...aps.values()].map(a => [a.lat, a.lon]), 6);
   }
 }
 $('btnFit').onclick = () => drawMap(true);
@@ -759,8 +829,8 @@ async function openPlane(h) {
   const p = planeByHex(h); if (!p) return;
   openHex = h; drawMap();
   const isHer = h === herHex(), u = p.ultima, s = statusLine(p);
-  if (p.fase === 'aire' && u) map.setView([u.lat, u.lon], Math.max(map.getZoom(), 5));
-  else if (p.aeropuerto) map.setView([p.aeropuerto.lat, p.aeropuerto.lon], Math.max(map.getZoom(), 5));
+  if (p.fase === 'aire' && u) focusMap([[u.lat, u.lon]], Math.max(map.getZoom(), 5));
+  else if (p.aeropuerto) focusMap([[p.aeropuerto.lat, p.aeropuerto.lon]], Math.max(map.getZoom(), 5));
   const c = p.fase === 'aire' && u ? await nearCity(u.lat, u.lon) : null;
   openSheet(`
     <h3>${isHer ? '💛 ' : ''}${esc(p.matricula)}</h3>
@@ -929,12 +999,12 @@ $('range').querySelectorAll('button').forEach(b => b.onclick = () => {
 function setView(v) {
   view = v; store.set('vuelos.view', v);
   document.querySelectorAll('[data-view]').forEach(el => el.hidden = !el.dataset.view.split(' ').includes(v));
-  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === v));
-  if (v !== 'ajustes') { setTimeout(() => { map.invalidateSize(); drawMap(); }, 0); }
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === v));
+  if (v === 'ajustes') setSnap('full'); else if (panelSnap === 'full' || panelSnap === 'peek') setSnap('mid');
   renderAll();
-  window.scrollTo({top: 0});
+  $('panelBody').scrollTop = 0;
 }
-document.querySelectorAll('nav button').forEach(b => b.onclick = () => setView(b.dataset.tab));
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => setView(b.dataset.tab));
 
 function renderChip() {
   const p = planeByHex(herHex());
@@ -991,6 +1061,7 @@ async function liveTick() {
   }
 }
 
+setSnap('mid');
 setView(['ella', 'flota', 'ajustes'].includes(view) ? view : 'ella');
 load();
 setInterval(load, 60000);
