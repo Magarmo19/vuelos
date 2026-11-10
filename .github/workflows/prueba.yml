@@ -6,23 +6,17 @@ jobs:
   t:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - run: |
-          curl -sS -L -D h.txt --compressed -A 'vuelos-tracker/2.0' -o f.json https://globe.adsb.lol/data/traces/0e/trace_full_4d210e.json
-          cat h.txt
-          python3 - <<'PY'
-          import json, datetime
-          raw = open('f.json','rb').read(); print('head', raw[:80])
-          import gzip
-          if raw[:2] == b'\x1f\x8b': raw = gzip.decompress(raw)
-          d = json.loads(raw)
-          print('keys', [k for k in d if k != 'trace'], {k: d[k] for k in d if k != 'trace'})
-          t = d['trace']; ts = d['timestamp']
-          print('n', len(t)); print('first', t[0]); print('last', t[-1])
-          prev = None
-          for p in t:
-              g = p[3] == 'ground'
-              leg = p[6] & 2 if isinstance(p[6], int) else None
-              if leg or (prev is not None and g != prev):
-                  print(datetime.datetime.utcfromtimestamp(ts + p[0]).isoformat(), 'alt', p[3], 'flags', p[6], 'lat', p[1], 'lon', p[2], 'src', p[9] if len(p) > 9 else None)
-              prev = g
+          cd tracker && python3 - <<'PY'
+          import sys; sys.path.insert(0, '.')
+          import track as t
+          for h in ['4d210e']:
+              pts = t.fetch_trace(h)
+              print('puntos', len(pts))
+              air = [p for p in pts if p[3] != 'ground']
+              # simular que el rastreador vio el avión por primera vez 30 min después del primer punto en el aire
+              if air:
+                  first = air[0][0] + 1800
+                  print('RESULTADO', t.takeoff_from_trace(pts, first))
           PY
