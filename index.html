@@ -471,7 +471,7 @@ const herFlights = () => (her && her.vuelos || []).filter(f => !(assign.excluir_
 // ------------------------------------------------------------------ mapa
 const map = L.map('map', {zoomControl: false, worldCopyJump: true}).setView([44, 6], 4);
 map.attributionControl.setPrefix('');
-// Mapa base: Stadia Maps — relieve a color en modo claro, «Alidade Smooth Dark» en modo oscuro. Si el dominio aún no está
+// Mapa base: Stadia Maps — «Alidade Smooth» (plano y minimalista) en modo claro, «Alidade Smooth Dark» en modo oscuro. Si el dominio aún no está
 // autorizado en Stadia, cambia solo a OpenStreetMap para que nunca se quede sin mapa.
 const darkMQ = window.matchMedia('(prefers-color-scheme: dark)');
 const isDark = () => darkMQ.matches;
@@ -480,7 +480,7 @@ const stadiaUrl = style => `https://tiles.stadiamaps.com/tiles/${style}/{z}/{x}/
 // Stadia devuelve el error 401 como una imagen, así que se comprueba antes con una petición de prueba.
 async function probeStadia() {
   try {
-    const u = stadiaUrl('stamen_terrain').replace('{z}/{x}/{y}{r}', '0/0/0');
+    const u = stadiaUrl('alidade_smooth').replace('{z}/{x}/{y}{r}', '0/0/0');
     const r = await fetch(u + (u.includes('?') ? '&' : '?') + 't=' + Date.now(), {cache: 'no-store'});
     if (r.status === 401 || r.status === 403) { mapFallback = true; mapReason = `Stadia respondió ${r.status}: el dominio no está autorizado (o la clave no es válida).`; setBaseLayer(); }
   } catch (e) { /* sin respuesta legible: se deja Stadia y actúa el control de errores de teselas */ }
@@ -489,8 +489,8 @@ function setBaseLayer() {
   if (baseLayer) map.removeLayer(baseLayer);
   if (!mapFallback) {
     let errs = 0;
-    baseLayer = L.tileLayer(stadiaUrl(isDark() ? 'alidade_smooth_dark' : 'stamen_terrain'), {
-      maxZoom: 12, attribution: '© <a href="https://stadiamaps.com/">Stadia Maps</a>' + (isDark() ? '' : ' © <a href="https://stamen.com/">Stamen Design</a>') + ' © <a href="https://openmaptiles.org/">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'});
+    baseLayer = L.tileLayer(stadiaUrl(isDark() ? 'alidade_smooth_dark' : 'alidade_smooth'), {
+      maxZoom: 12, attribution: '© <a href="https://stadiamaps.com/">Stadia Maps</a> © <a href="https://openmaptiles.org/">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'});
     baseLayer.on('tileerror', () => { if (++errs >= 3 && !mapFallback) { mapFallback = true; mapReason = 'Las teselas de Stadia no cargan.'; setBaseLayer(); } });
   } else {
     baseLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 12, attribution: '© OpenStreetMap', className: isDark() ? 'dark-tiles' : ''});
