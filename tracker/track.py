@@ -17,6 +17,7 @@ Para cada avión detecta despegues y aterrizajes y genera, en DATA_DIR:
 
 Solo librería estándar de Python 3.9+.
 """
+import gzip
 import json
 import math
 import os
@@ -47,6 +48,8 @@ LOST_CLOSE_HOURS = 8      # sin señal en crucero tanto tiempo => vuelo "sin se�
 FILL_GAP_HOURS = 30       # completar destino si reaparece en tierra antes de esto
 LIVE_TRACK_POINTS = 150   # puntos de trayectoria por vuelo en flota.json
 STORE_TRACK_POINTS = 400  # puntos guardados por vuelo cerrado
+TRACE_URL = "https://adsb.lol/data/traces/{k}/{f}_{h}.json"  # recorrido del día de cada avión (adsb.lol)
+TRACE_RETRY_MIN = 15      # si no sale el origen, reintentar con el recorrido cada tanto
 
 API_TYPE = [
     "https://api.adsb.lol/v2/type/{q}",
@@ -147,6 +150,54 @@ def fetch_json(url, timeout=20):
     })
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read().decode("utf-8"))
+
+
+def fetch_trace(h):
+    """Recorrido del día del avión según adsb.lol: [(ts, lat, lon, alt|'ground', flags), ...] ordenado."""
+    pts = {}
+    for f in ("trace_full", "trace_recent"):
+        url = TRACE_URL.format(k=h[-2:], f=f, h=h)
+        try:
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "vuelos-tracker/2.0 (uso personal, no comercial)", "Accept-Encoding": "gzip"})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                raw = r.read()
+            if raw[:2] == b"\x1f\x8b":
+                raw = gzip.decompress(raw)
+            d = json.loads(raw.decode("utf-8"))
+            base = d["timestamp"]
+            for p in d.get("trace") or []:
+                ts = base + p[0]
+                pts[round(ts)] = (ts, p[1], p[2], p[3], p[6] if len(p) > 6 and isinstance(p[6], int) else 0)
+        except Exception as e:
+            print(f"  · traza {h} {f}: {e}", file=sys.stderr)
+        time.sleep(REQ_PAUSE)
+    return [pts[k] for k in sorted(pts)]
+
+
+def takeoff_from_trace(pts, first_ts):
+    """Busca hacia atrás desde el primer punto del vuelo actual dónde despegó.
+    Devuelve (aeropuerto, aproximado, hora_despegue) o None."""
+    pts = [p for p in pts if p[0] <= first_ts + 120]
+    if not pts or pts[-1][3] == "ground":
+        return None
+    i = len(pts) - 1
+    while i > 0:
+        if pts[i][4] & 2:                      # readsb marca aquí el inicio de un tramo nuevo
+            break
+        prev = pts[i - 1]
+        if pts[i][0] - prev[0] > 3 * 3600:     # hueco grande: el despegue no está en el recorrido
+            break
+        if prev[3] == "ground":                # último punto en tierra antes de despegar
+            ap, d = nearest_airport(prev[1], prev[2])
+            return (ap, False, pts[i][0]) if ap and _d(d) < 15 else None
+        i -= 1
+    ts, lat, lon, alt, _ = pts[i]
+    if isinstance(alt, (int, float)) and alt < 8000:
+        ap, d = nearest_airport(lat, lon)
+        if ap and _d(d) < 40:
+            return ap, True, ts
+    return None
 
 
 def query(templates, q):
@@ -326,6 +377,25 @@ class Store:
         f.pop("distancia_km", None)
         return f
 
+    def fill_origin(self, h, cur, st, name):
+        """Si no se vio el despegue, saca el origen del recorrido del día publicado por adsb.lol."""
+        if cur.get("origen") or not cur.get("track"):
+            return
+        now = now_ts()
+        first_ts = cur["track"][0][3]
+        if now - first_ts > 20 * 3600 or now - st.get("traza_ts", 0) < TRACE_RETRY_MIN * 60:
+            return
+        st["traza_ts"] = now
+        res = takeoff_from_trace(fetch_trace(h), first_ts)
+        if not res:
+            print(f"  {name}: origen aún sin encontrar en el recorrido")
+            return
+        ap, approx, dep = res
+        cur.update(origen=ap, origen_aprox=approx)
+        if first_ts - 20 * 3600 < dep <= first_ts + 120:
+            cur.update(salida=iso(dep), salida_aprox=approx)
+        print(f"  {name}: origen recuperado del recorrido: {ap['icao']}{' (aprox.)' if approx else ''}")
+
     def process(self, h, ac, answered, t):
         st = self.state["aviones"].setdefault(h, {"fase": "desconocida"})
         cur = st.get("vuelo")
@@ -347,6 +417,7 @@ class Store:
                         print(f"  {name}: DESPEGUE desde {(cur['origen'] or {}).get('icao', '?')}")
                     st.update(vuelo=cur, fase="aire", aeropuerto=None)
                 self.add_point(cur, rd)
+                self.fill_origin(h, cur, st, name)
             else:
                 ap, d = nearest_airport(rd["lat"], rd["lon"])
                 if cur is not None:
