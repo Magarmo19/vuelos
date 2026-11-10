@@ -7,10 +7,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -sS --compressed -A 'vuelos-tracker/2.0' -o f.json https://globe.adsb.lol/data/traces/0e/trace_full_4d210e.json
+          curl -sS -D h.txt --compressed -A 'vuelos-tracker/2.0' -o f.json https://globe.adsb.lol/data/traces/0e/trace_full_4d210e.json
+          cat h.txt
           python3 - <<'PY'
           import json, datetime
-          d = json.load(open('f.json'))
+          raw = open('f.json','rb').read(); print('head', raw[:80])
+          import gzip
+          if raw[:2] == b'\x1f\x8b': raw = gzip.decompress(raw)
+          d = json.loads(raw)
           print('keys', [k for k in d if k != 'trace'], {k: d[k] for k in d if k != 'trace'})
           t = d['trace']; ts = d['timestamp']
           print('n', len(t)); print('first', t[0]); print('last', t[-1])
