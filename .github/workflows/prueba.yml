@@ -1,0 +1,18 @@
+name: Prueba trazas
+on:
+  push:
+    branches: [prueba-trazas]
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for h in 4d210e; do
+            for base in https://globe.adsb.lol https://globe.airplanes.live https://globe.adsb.fi https://adsb.lol https://airplanes.live; do
+              for f in trace_full trace_recent; do
+                u="$base/data/traces/${h: -2}/${f}_$h.json"
+                code=$(curl -sS -L -o out.json -w '%{http_code}' --compressed -A 'vuelos-tracker/2.0 (uso personal, no comercial)' "$u")
+                echo "$code $(wc -c < out.json) $u"; head -c 300 out.json; echo
+              done
+            done
+          done
