@@ -1,7 +1,13 @@
 {
   "etiqueta": "Judit",
   "asignaciones": [
-    { "matricula": "9H-ILV", "hex": "4d210e", "desde": "2026-11-10", "hasta": null, "nota": "Primer avión en VistaJet" }
+    {
+      "matricula": "9H-VCG",
+      "hex": "4d20e9",
+      "desde": "2026-11-10",
+      "hasta": null,
+      "nota": ""
+    }
   ],
   "incluir_vuelos": [],
   "excluir_vuelos": []
