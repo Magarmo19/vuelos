@@ -194,6 +194,11 @@
   .sheet.float{max-height:46vh;box-shadow:0 -8px 40px rgba(0,0,0,.28)}
   .sheet .x{position:sticky;top:0;float:right;margin:-2px -6px 0 8px;width:32px;height:32px;border-radius:50%;border:0;background:var(--card2);color:var(--muted);font-size:20px;line-height:1;cursor:pointer;z-index:2}
   .sheet:not(.float) .x{display:none}
+  .live-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-4px 0 12px;font-size:12.5px;color:var(--muted)}
+  .live-row .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:6px;vertical-align:1px;animation:pulse 2s infinite}
+  @keyframes pulse{50%{opacity:.35}}
+  .follow{border:1px solid var(--line);background:var(--card2);color:var(--text);border-radius:99px;padding:5px 11px;font-size:12.5px;font-weight:620;cursor:pointer}
+  .follow.on{background:var(--accent);border-color:var(--accent);color:#fff}
   .grab{width:40px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 12px}
   .sheet h3{font-size:24px;font-weight:780;letter-spacing:-.02em}
   .sheet .meta{color:var(--muted);font-size:13.5px;margin:2px 0 14px}
@@ -846,17 +851,45 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheetOpen(
   s.addEventListener('touchmove', e => { if (y0 != null && e.touches[0].clientY - y0 > 80) { y0 = null; closeSheet(); } }, {passive: true});
   s.addEventListener('touchend', () => y0 = null); })();
 
+// Ficha del avión en directo: se refresca con cada dato nuevo y, si «Seguir» está activo, el mapa va con el avión
+let following = false, nearKey = '', followKey = '';
+function updatePlaneSheet(recenter) {
+  if (!openHex || !$('psFase')) return;
+  const p = planeByHex(openHex); if (!p) return;
+  const u = p.ultima, air = p.fase === 'aire' && u;
+  $('psFase').textContent = p.fase === 'aire' ? 'En vuelo' : p.fase === 'tierra' ? 'En tierra' : 'Sin señal';
+  $('psFaseSub').textContent = p.fase === 'aire' && p.vuelo ? 'desde ' + code(p.vuelo.origen)
+    : p.aeropuerto ? cityOf(p.aeropuerto) : (u ? ago(u.ts * 1000) : '—');
+  $('psAlt').textContent = air ? Math.round(u.alt).toLocaleString('es-ES') + ' ft' : '—';
+  $('psGs').textContent = air ? Math.round(u.gs * 1.852) + ' km/h' : '—';
+  $('psAgo').innerHTML = u ? `${air ? '<span class="dot"></span>' : ''}${air && p.vuelo ? dur((Date.now() - T(p.vuelo.salida)) / 60000) + ' en el aire · ' : ''}dato de ${ago(u.ts * 1000)}` : '';
+  const fb = $('psFollow'); fb.hidden = !air; fb.classList.toggle('on', following); fb.textContent = following ? 'Siguiendo' : 'Seguir';
+  const fk = air ? `${openHex}:${u.ts}` : '';
+  if (air && following && (recenter || fk !== followKey)) {
+    followKey = fk; const z = map.getZoom(); map.fitBounds([[u.lat, u.lon], [u.lat, u.lon]], Object.assign({maxZoom: z, animate: true}, mapPad()));
+  }
+  const n = $('nearTxt');
+  if (!air) { n.hidden = true; return; }
+  const key = `${openHex}:${u.lat.toFixed(2)},${u.lon.toFixed(2)}`;
+  if (key === nearKey) return;
+  nearKey = key; const h = openHex;
+  nearCity(u.lat, u.lon).then(c => { if (c && openHex === h && $('nearTxt')) { $('nearTxt').textContent = `Ahora cerca de ${c}.`; $('nearTxt').hidden = false; } });
+}
+map.on('dragstart', () => { if (following) { following = false; updatePlaneSheet(); } });
+setInterval(() => { if (openHex && !document.hidden) updatePlaneSheet(); }, 15000);   // «hace X min» y tiempo en el aire
+
 async function openPlane(h) {
   const p = planeByHex(h); if (!p) return;
-  openHex = h; drawMap();
+  openHex = h; nearKey = ''; drawMap();
   const isHer = h === herHex(), u = p.ultima, s = statusLine(p);
   openSheet(`
     <h3>${isHer ? '💛 ' : ''}${esc(p.matricula)}</h3>
     <div class="meta">${esc(p.modelo || p.tipo || '')}${p.callsign ? ' · ' + esc(p.callsign) : ''} · hex ${esc(p.hex)}</div>
+    <div class="live-row"><span id="psAgo"></span><button class="follow" id="psFollow" type="button">Seguir</button></div>
     <div class="stats" style="margin-bottom:12px">
-      <div class="stat"><b class="sm">${p.fase === 'aire' ? 'En vuelo' : p.fase === 'tierra' ? 'En tierra' : 'Sin señal'}</b><span>${p.fase === 'aire' && p.vuelo ? 'desde ' + esc(code(p.vuelo.origen)) : p.aeropuerto ? esc(cityOf(p.aeropuerto)) : (u ? ago(u.ts * 1000) : '—')}</span></div>
-      <div class="stat"><b class="sm">${u && p.fase === 'aire' ? Math.round(u.alt).toLocaleString('es-ES') + ' ft' : '—'}</b><span>altitud</span></div>
-      <div class="stat"><b class="sm">${u && p.fase === 'aire' ? Math.round(u.gs * 1.852) + ' km/h' : '—'}</b><span>velocidad</span></div>
+      <div class="stat"><b class="sm" id="psFase"></b><span id="psFaseSub"></span></div>
+      <div class="stat"><b class="sm" id="psAlt"></b><span>altitud</span></div>
+      <div class="stat"><b class="sm" id="psGs"></b><span>velocidad</span></div>
     </div>
     <p class="note" id="nearTxt" hidden></p>
     ${isHer ? `<div class="btn ghost" style="cursor:default">💛 ${esc(label())} va en este avión</div>`
@@ -868,11 +901,11 @@ async function openPlane(h) {
     </div>
     <h2 style="margin-top:20px">Vuelos recientes de este avión</h2>
     <div id="planeHist"><div class="empty">Cargando…</div></div>`, true);
+  following = p.fase === 'aire' && !!u;
+  $('psFollow').onclick = () => { following = !following; updatePlaneSheet(true); };
   if (p.fase === 'aire' && u) focusMap([[u.lat, u.lon]], Math.max(map.getZoom(), 5));
   else if (p.aeropuerto) focusMap([[p.aeropuerto.lat, p.aeropuerto.lon]], Math.max(map.getZoom(), 5));
-  if (p.fase === 'aire' && u) nearCity(u.lat, u.lon).then(c => {
-    const n = $('nearTxt'); if (c && n && openHex === h) { n.textContent = `Ahora cerca de ${c}.`; n.hidden = false; }
-  });
+  updatePlaneSheet();
   const sb = $('setHer'); if (sb) sb.onclick = () => assignFromToday(p);
   if (!histFleet) histFleet = await loadData('historial_flota.json') || [];
   if (openHex !== h) return;   // mientras cargaba se abrió otro avión
@@ -1053,6 +1086,10 @@ async function loadAssign() {
 }
 async function load() {
   const [f, h] = await Promise.all([loadData('flota.json'), loadData('ella.json'), loadAssign()]);
+  if (f && fleet) f.aviones.forEach(n => {   // no retroceder si el directo del navegador ya iba por delante
+    const o = fleet.aviones.find(x => x.hex === n.hex);
+    if (o && o.ultima && n.ultima && o.ultima.ts > n.ultima.ts && o.fase === n.fase) n.ultima = o.ultima;
+  });
   if (f) fleet = f;
   if (h) her = h;
   if (h && h.etiqueta && !assign.etiqueta) assign.etiqueta = h.etiqueta;
@@ -1064,26 +1101,36 @@ async function load() {
   }
   histFleet = null;
   renderAll();
+  updatePlaneSheet();
 }
 
-// Refresco en directo de su avión (si el navegador puede consultar la API directamente)
-async function liveTick() {
-  const p = planeByHex(herHex());
-  if (!p || p.fase !== 'aire' || document.hidden || view === 'ajustes') return;
+// Refresco en directo de su avión y del avión abierto (si el navegador puede consultar la API directamente)
+async function liveOne(p) {
   for (const u of [`https://api.adsb.lol/v2/hex/${p.hex}`, `https://api.airplanes.live/v2/hex/${p.hex}`]) {
     try {
       const ctl = new AbortController(); setTimeout(() => ctl.abort(), 6000);
       const j = await (await fetch(u, {signal: ctl.signal})).json();
       const a = (j.ac || []).find(x => x.hex === p.hex && x.lat != null); if (!a) continue;
       const t = Math.round((j.now || Date.now()) / 1000 - (a.seen_pos || a.seen || 0));
-      if (p.ultima && t <= p.ultima.ts) return;
+      if (p.ultima && t <= p.ultima.ts) return false;
       p.ultima = {ts: t, lat: a.lat, lon: a.lon, alt: a.alt_baro === 'ground' ? 0 : (a.alt_baro || 0), gs: a.gs || 0, trk: a.track || 0, vs: a.baro_rate || 0};
       if (p.vuelo && p.vuelo.track) p.vuelo.track.push([a.lat, a.lon, p.ultima.alt]);
-      if (view === 'ella') renderHero();
-      renderChip(); drawMap();
-      return;
+      return true;
     } catch (e) { /* sin CORS o sin red: seguimos con los datos del rastreador */ }
   }
+  return false;
+}
+async function liveTick() {
+  if (document.hidden) return;
+  const want = new Set();
+  if (view !== 'ajustes') want.add(herHex());
+  if (openHex) want.add(openHex);
+  const ps = [...want].map(planeByHex).filter(p => p && p.fase === 'aire');
+  if (!ps.length) return;
+  const changed = (await Promise.all(ps.map(liveOne))).some(Boolean);
+  if (!changed) return;
+  if (view === 'ella') renderHero();
+  renderChip(); drawMap(); updatePlaneSheet();
 }
 
 setSnap('mid');
