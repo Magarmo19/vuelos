@@ -417,6 +417,29 @@ class Store:
             print(f"  {name}: hueco de datos; vuelo cerrado sin destino")
         st.update(ultimo_cerrado=cur["id"], vuelo=None, fase="desconocida", aeropuerto=None)
 
+    def split_gaps(self):
+        """Corta los vuelos en curso que juntan varios vuelos por huecos de datos: lo anterior al
+        último hueco imposible se cierra y el vuelo en curso empieza tras ese hueco."""
+        for h, st in self.state["aviones"].items():
+            cur = st.get("vuelo")
+            tr = (cur or {}).get("track") or []
+            cut = None
+            for i in range(1, len(tr)):
+                p = tr[i]
+                if not same_flight(tr[i - 1], {"ts": p[3], "lat": p[0], "lon": p[1], "alt": p[2]}):
+                    cut = i
+            if cut is None:
+                continue
+            name = self.ident(h)["matricula"]
+            old = dict(cur, track=tr[:cut])
+            self.close_after_gap(st, old, name)
+            p = tr[cut]
+            new = self.new_flight(h, {"ts": p[3], "lat": p[0], "lon": p[1], "alt": p[2],
+                                      "callsign": cur.get("callsign") or ""}, {})
+            new.update(track=tr[cut:], alt_max=max(q[2] for q in tr[cut:]))
+            st.update(vuelo=new, fase="aire", aeropuerto=None)
+            print(f"  {name}: vuelo partido por un hueco de datos; el actual empieza {new['salida']}")
+
     def can_reopen(self, prev, rd):
         """Un vuelo cerrado «sin señal» se reabre solo si la nueva lectura puede ser su continuación."""
         if rd["ts"] - parse_iso(prev["llegada"]) > REOPEN_MAX_HOURS * 3600:
@@ -707,6 +730,7 @@ def main():
     if not cfg:
         sys.exit("falta config.json")
     store = Store()
+    store.split_gaps()
     start = last_push = now_ts()
     n = 0
     while True:
