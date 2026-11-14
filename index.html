@@ -161,6 +161,9 @@
   .btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;font-weight:680;font-size:15.5px;color:#fff;background:var(--accent);border:0;border-radius:14px;padding:13px;text-decoration:none;cursor:pointer}
   .btn.her{background:var(--her);color:#1d1606}
   .btn.ghost{background:var(--card2);color:var(--text);font-weight:600;font-size:14.5px}
+  .btn.fr24{margin-top:14px}
+  .stale{background:rgba(255,170,0,.14);border:1px solid rgba(255,170,0,.45);color:var(--text);border-radius:14px;padding:10px 12px;font-size:13.5px;line-height:1.45;margin-bottom:12px}
+  .chip.stale-chip .dot{background:#f5a623}
   .btn.danger{background:rgba(255,107,107,.12);color:var(--red);font-size:14px}
   .btn:disabled{opacity:.5}
   .row{display:flex;gap:8px;margin-top:8px}
@@ -277,6 +280,7 @@
     </div>
   </div>
   <div class="panel-body" id="panelBody"><div class="wrap">
+  <div class="stale" id="stale" hidden></div>
   <!-- ===================== ELLA ===================== -->
   <section class="card hero" data-view="ella" id="hero">
     <div class="who"><div class="state" id="state">—</div><div class="plane-tag" id="planeTag" hidden></div></div>
@@ -295,6 +299,7 @@
         <div class="fact"><b id="fTime">—</b><span>En el aire</span></div>
       </div>
       <div class="sub" id="sub"></div>
+      <a class="btn ghost fr24" id="heroFr24" href="#" target="_blank" rel="noopener">Abrir en Flightradar24 ↗</a>
     </div>
     <div class="noassign" id="noAssign" hidden></div>
   </section>
@@ -438,9 +443,14 @@ async function ghRead(file, ref) {
   const j = await gh(`contents/${file}?ref=${ref}&t=${Date.now()}`, {cache: 'no-store'});
   return {data: JSON.parse(b64dec(j.content)), sha: j.sha};
 }
+const STALE_MIN = 30;   // minutos sin datos nuevos para avisar
+const WEB_AUTHOR = {name: 'vuelos-web', email: 'vuelos-web@users.noreply.github.com'};
+const fr24Url = matricula => `https://www.flightradar24.com/data/aircraft/${encodeURIComponent(String(matricula || '').toLowerCase())}`;
 async function ghWrite(file, obj, sha, message) {
   return gh(`contents/${file}`, {method: 'PUT', body: JSON.stringify({
-    message, branch: 'main', sha, content: b64enc(JSON.stringify(obj, null, 2) + '\n')})});
+    message, branch: 'main', sha, content: b64enc(JSON.stringify(obj, null, 2) + '\n'),
+    // autor anónimo: así no aparece el email de la cuenta en el historial público
+    author: WEB_AUTHOR, committer: WEB_AUTHOR})});
 }
 
 // Datos: primero la rama "datos" (más reciente), si no, la copia publicada con la web.
@@ -691,6 +701,8 @@ async function renderHero() {
     return;
   }
   $('heroBody').hidden = false; $('noAssign').hidden = true;
+  $('heroFr24').href = fr24Url(a.matricula);
+  $('heroFr24').textContent = `Abrir ${a.matricula} en Flightradar24 ↗`;
   $('planeTag').hidden = false;
   $('planeTag').textContent = `${a.matricula}${p ? ' · ' + p.modelo : ''}`;
   $('planeTag').onclick = () => hh && openPlane(hh);
@@ -901,8 +913,8 @@ async function openPlane(h) {
     <p class="note" id="nearTxt" hidden></p>
     ${isHer ? `<div class="btn ghost" style="cursor:default">💛 ${esc(label())} va en este avión</div>`
             : `<button class="btn her" id="setHer" type="button">💛 ${esc(label())} va en este avión</button>`}
-    <div class="links" style="margin-top:10px">
-      <a href="https://www.flightradar24.com/data/aircraft/${esc(p.matricula.toLowerCase())}" target="_blank" rel="noopener">Flightradar24</a>
+    <a class="btn ghost fr24" href="${esc(fr24Url(p.matricula))}" target="_blank" rel="noopener">Abrir en Flightradar24 ↗</a>
+    <div class="links" style="margin-top:10px;grid-template-columns:1fr 1fr">
       <a href="https://globe.adsbexchange.com/?icao=${esc(p.hex)}" target="_blank" rel="noopener">ADS-B Exch.</a>
       <a href="https://planefinder.net/data/aircraft/${esc(p.matricula)}" target="_blank" rel="noopener">Plane Finder</a>
     </div>
@@ -936,7 +948,8 @@ function openFlight(id) {
       <div class="stat"><b class="sm">${f.estado === 'en_vuelo' ? dur((Date.now() - T(f.salida)) / 60000) : dur(f.duracion_min)}</b><span>${f.distancia_km ? f.distancia_km.toLocaleString('es-ES') + ' km' : 'duración'}</span></div>
     </div>
     <p class="note" style="margin-top:12px">${f.origen ? esc(f.origen.nombre) : 'Origen desconocido'} → ${f.destino ? esc(f.destino.nombre) : (f.estado === 'en_vuelo' ? 'en ruta' : 'destino desconocido')}${f.alt_max ? ` · altitud máx. ${f.alt_max.toLocaleString('es-ES')} ft` : ''}</p>
-    <button class="btn danger" id="notHers" type="button">No iba en este vuelo</button>`, true);
+    <a class="btn ghost fr24" href="${esc(fr24Url(f.matricula))}" target="_blank" rel="noopener">Ver ${esc(f.matricula)} en Flightradar24 ↗</a>
+    <button class="btn danger" id="notHers" type="button" style="margin-top:10px">No iba en este vuelo</button>`, true);
   drawMap(true);
   $('notHers').onclick = () => toggleFlight(id, true);
 }
@@ -970,7 +983,7 @@ function assignFromToday(p) {
     data.asignaciones.forEach(a => { if ((!a.hasta || a.hasta >= d) && (!a.desde || a.desde < d)) a.hasta = addDays(d, -1); });
     data.asignaciones.push({matricula: p.matricula, hex: p.hex, desde: d, hasta: null, nota: ''});
     data.asignaciones.sort((a, b) => (a.desde || '').localeCompare(b.desde || ''));
-  }, `${label()} va en ${p.matricula} desde ${d}`).then(ok => { if (ok) closeSheet(); });
+  }, `Asignación ${p.matricula} desde ${d}`).then(ok => { if (ok) closeSheet(); });
 }
 function toggleFlight(id, isHers) {
   saveAssign(data => {
@@ -1034,7 +1047,7 @@ function renderSettings() {
   const base = location.href.replace(/[#?].*$/, '').replace(/index\.html$/, '').replace(/\/?$/, '/');
   const ics = base + 'data/vuelos.ics';
   $('calBtn').href = ics.replace(/^https?:/, 'webcal:'); $('calUrl').textContent = ics;
-  $('dataInfo').innerHTML = fleet ? `Flota actualizada ${ago(T(fleet.actualizado))} (${fTime.format(T(fleet.actualizado))}). ${fleet.aviones.length} aviones de ${esc(fleet.operador || 'la flota')} identificados hasta ahora; la lista crece sola a medida que vuelan.<br>El rastreador consulta cada minuto mientras está activo y GitHub lo lanza cada ~5 min.<br>Mapa: ${mapFallback ? 'alternativo (OpenStreetMap). ' + esc(mapReason) : 'Stadia Maps ✓' + (STADIA_KEY ? ' (con clave)' : ' (dominio)')}`
+  $('dataInfo').innerHTML = fleet ? `Flota actualizada ${ago(T(fleet.actualizado))} (${fTime.format(T(fleet.actualizado))}). ${fleet.aviones.length} aviones de ${esc(fleet.operador || 'la flota')} identificados hasta ahora; la lista crece sola a medida que vuelan.<br>El rastreador consulta cada minuto mientras está activo y se lanza cada pocos minutos (cron-job.org + GitHub Actions).<br>Mapa: ${mapFallback ? 'alternativo (OpenStreetMap). ' + esc(mapReason) : 'Stadia Maps ✓' + (STADIA_KEY ? ' (con clave)' : ' (dominio)')}`
     : 'Sin datos todavía.';
 }
 $('tokSave').onclick = async () => {
@@ -1076,6 +1089,12 @@ function renderChip() {
   const air = p && p.fase === 'aire';
   $('chip').classList.toggle('live', !!air);
   $('chipTxt').textContent = air ? `${label()} en vuelo` : fleet ? ago(T(fleet.actualizado)) : 'Sin datos';
+  // aviso si el rastreador lleva un rato sin publicar
+  const old = fleet ? (Date.now() - T(fleet.actualizado)) / 60000 : 0;
+  const stale = old > STALE_MIN;
+  $('chip').classList.toggle('stale-chip', stale && !air);
+  $('stale').hidden = !stale;
+  if (stale) $('stale').innerHTML = `⚠️ Los datos son de <b>${ago(T(fleet.actualizado))}</b>. El rastreador puede estar parado: posiciones y vuelos pueden no estar al día. Mientras tanto, usa <b>Flightradar24</b>.`;
 }
 function renderAll() {
   document.title = $('title').textContent = view === 'flota' ? `Flota ${fleet && fleet.operador || ''}`.trim() : view === 'ajustes' ? 'Ajustes' : `Vuelos de ${label()}`;

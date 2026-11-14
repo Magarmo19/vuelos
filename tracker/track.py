@@ -45,11 +45,16 @@ AIRBORNE_MIN_GS = 70      # nudos
 LANDED_LOST_MIN = 15      # min sin señal estando bajo => aterrizado
 LOW_ALT_FT = 5000
 LOST_CLOSE_HOURS = 8      # sin señal en crucero tanto tiempo => vuelo "sin señal"
-FILL_GAP_HOURS = 30       # completar destino si reaparece en tierra antes de esto
+FILL_GAP_HOURS = 12       # completar destino si reaparece en tierra antes de esto
 LIVE_TRACK_POINTS = 150   # puntos de trayectoria por vuelo en flota.json
 STORE_TRACK_POINTS = 400  # puntos guardados por vuelo cerrado
 TRACE_URL = "https://adsb.lol/data/traces/{k}/{f}_{h}.json"  # recorrido del día de cada avión (adsb.lol)
 TRACE_RETRY_MIN = 15      # si no sale el origen, reintentar con el recorrido cada tanto
+GAP_MIN = 30              # minutos sin puntos a partir de los cuales hay un "hueco" en el vuelo
+CRUISE_KT = 430           # velocidad de crucero típica (nudos) para estimar llegadas tras un hueco
+SAME_FLIGHT_MIN_KT = 250  # tras un hueco, si la velocidad media implícita es menor, aterrizó en medio
+MAX_FLIGHT_MIN = 20 * 60  # ningún avión de la flota vuela más de esto seguido
+REOPEN_MAX_HOURS = 6      # un vuelo "sin señal" solo se reabre si vuelve a verse antes de esto
 
 API_TYPE = [
     "https://api.adsb.lol/v2/type/{q}",
@@ -300,6 +305,28 @@ def reading_from(ac):
     }
 
 
+# ------------------------------------------------------------------ huecos de datos
+
+def same_flight(lp, rd):
+    """¿La nueva lectura en el aire puede ser el mismo vuelo que el último punto lp=[lat,lon,alt,ts]?
+    Tras un hueco largo, si el avión no pudo seguir volando todo ese tiempo (velocidad media
+    implícita baja, o venía bajando), es que aterrizó y volvió a despegar sin que lo viéramos."""
+    gap = rd["ts"] - lp[3]
+    if gap < GAP_MIN * 60:
+        return True
+    if lp[2] < LOW_ALT_FT:
+        return False
+    kt = haversine_km(lp[0], lp[1], rd["lat"], rd["lon"]) / 1.852 / (gap / 3600)
+    return kt >= SAME_FLIGHT_MIN_KT
+
+
+def est_arrival(lp, lat, lon, cap_ts):
+    """Hora estimada de llegada desde el último punto visto hasta (lat, lon) a velocidad de crucero."""
+    km = haversine_km(lp[0], lp[1], lat, lon)
+    eta = lp[3] + km / (CRUISE_KT * 1.852) * 3600 + 10 * 60
+    return min(max(eta, lp[3] + 60), cap_ts)
+
+
 # ------------------------------------------------------------------ vuelos
 
 class Store:
@@ -377,6 +404,26 @@ class Store:
         f.pop("distancia_km", None)
         return f
 
+    def close_after_gap(self, st, cur, name):
+        """Cierra el vuelo en curso tras un hueco en el que el avión aterrizó sin que lo viéramos."""
+        lp = cur["track"][-1]
+        if lp[2] < LOW_ALT_FT:
+            ap, d = nearest_airport(lp[0], lp[1])
+            arr = lp[3] + min(lp[2] / 1500.0, 15) * 60
+            self.close(cur, ap, _d(d) > 25, arr, True)
+            print(f"  {name}: hueco de datos; aterrizaje deducido en {(ap or {}).get('icao', '?')}")
+        else:
+            self.close(cur, None, True, lp[3], True, estado="sin_senal")
+            print(f"  {name}: hueco de datos; vuelo cerrado sin destino")
+        st.update(ultimo_cerrado=cur["id"], vuelo=None, fase="desconocida", aeropuerto=None)
+
+    def can_reopen(self, prev, rd):
+        """Un vuelo cerrado «sin señal» se reabre solo si la nueva lectura puede ser su continuación."""
+        if rd["ts"] - parse_iso(prev["llegada"]) > REOPEN_MAX_HOURS * 3600:
+            return False
+        tr = self.tracks.get(prev["id"]) or []
+        return not tr or same_flight(tr[-1], rd)
+
     def fill_origin(self, h, cur, st, name):
         """Si no se vio el despegue, saca el origen del recorrido del día publicado por adsb.lol."""
         if cur.get("origen") or not cur.get("track"):
@@ -407,9 +454,12 @@ class Store:
         if rd:
             st["ultima"] = rd
             if rd["airborne"]:
+                if cur is not None and cur.get("track") and not same_flight(cur["track"][-1], rd):
+                    self.close_after_gap(st, cur, name)   # aterrizó y volvió a despegar sin verlo
+                    cur = None
                 if cur is None:
                     prev = self.by_id.get(st.get("ultimo_cerrado") or "")
-                    if prev and prev["estado"] == "sin_senal":
+                    if prev and prev["estado"] == "sin_senal" and self.can_reopen(prev, rd):
                         cur = self.reopen(prev["id"])
                         print(f"  {name}: recupera señal")
                     else:
@@ -421,17 +471,34 @@ class Store:
             else:
                 ap, d = nearest_airport(rd["lat"], rd["lon"])
                 if cur is not None:
-                    self.add_point(cur, rd)
-                    self.close(cur, ap, _d(d) > 15, rd["ts"] - 60, False)
-                    st["ultimo_cerrado"] = cur["id"]
-                    st["vuelo"] = None
-                    print(f"  {name}: ATERRIZAJE en {(ap or {}).get('icao', '?')}")
+                    lp = cur["track"][-1] if cur.get("track") else None
+                    if lp and rd["ts"] - lp[3] > GAP_MIN * 60:
+                        # hueco antes de verlo en tierra: no sabemos cuándo aterrizó
+                        lap, ld = nearest_airport(lp[0], lp[1])
+                        if lp[2] < LOW_ALT_FT and lap and ap and lap["icao"] != ap["icao"] and _d(ld) < 25:
+                            # venía bajando hacia otro aeropuerto: ese fue el destino; lo de después no se vio
+                            self.close_after_gap(st, cur, name)
+                        else:
+                            arr = est_arrival(lp, rd["lat"], rd["lon"], rd["ts"] - 60)
+                            self.close(cur, ap, _d(d) > 15, arr, True)
+                            st.update(ultimo_cerrado=cur["id"], vuelo=None)
+                            print(f"  {name}: ATERRIZAJE (tras hueco, hora aprox.) en {(ap or {}).get('icao', '?')}")
+                    else:
+                        self.add_point(cur, rd)
+                        self.close(cur, ap, _d(d) > 15, rd["ts"] - 60, False)
+                        st["ultimo_cerrado"] = cur["id"]
+                        st["vuelo"] = None
+                        print(f"  {name}: ATERRIZAJE en {(ap or {}).get('icao', '?')}")
                 else:
                     prev = self.by_id.get(st.get("ultimo_cerrado") or "")
                     if prev and prev["estado"] == "sin_senal" and ap and _d(d) < 15:
                         lt = parse_iso(prev["llegada"])
-                        if rd["ts"] - lt < FILL_GAP_HOURS * 3600:
-                            prev.update(destino=ap, destino_aprox=False, estado="aterrizado", llegada_aprox=True)
+                        lp = (self.tracks.get(prev["id"]) or [None])[-1]
+                        if rd["ts"] - lt < FILL_GAP_HOURS * 3600 and (not lp or lp[2] >= LOW_ALT_FT):
+                            arr = est_arrival(lp, ap["lat"], ap["lon"], rd["ts"] - 60) if lp else lt
+                            prev.update(destino=ap, destino_aprox=False, estado="aterrizado", llegada_aprox=True,
+                                        llegada=iso(arr),
+                                        duracion_min=max(1, round((arr - parse_iso(prev["salida"])) / 60)))
                             o = prev.get("origen")
                             if o:
                                 prev["distancia_km"] = round(haversine_km(o["lat"], o["lon"], ap["lat"], ap["lon"]))
@@ -453,7 +520,9 @@ class Store:
 
     def prune(self, days):
         cutoff = now_ts() - days * 86400
-        keep = [f for f in self.hist if parse_iso(f["salida"]) >= cutoff]
+        # fuera también los «vuelos» imposibles (> 20 h) que dejaron los huecos de datos antiguos
+        keep = [f for f in self.hist if parse_iso(f["salida"]) >= cutoff
+                and (f.get("duracion_min") or 0) <= MAX_FLIGHT_MIN]
         gone = {f["id"] for f in self.hist} - {f["id"] for f in keep}
         for fid in gone:
             self.by_id.pop(fid, None)
@@ -603,11 +672,14 @@ def write_ics(cfg, assign, vuelos, t):
             desc.append(f"Duración: {h} h {m:02d} min")
         if f.get("distancia_km"):
             desc.append(f"Distancia: {f['distancia_km']} km")
-        desc.append(f"En directo: https://globe.adsbexchange.com/?icao={f['hex']}")
+        desc.append(f"Flightradar24: https://www.flightradar24.com/data/aircraft/{f['matricula'].lower()}")
+        desc.append(f"ADS-B Exchange: https://globe.adsbexchange.com/?icao={f['hex']}")
         lines += ["BEGIN:VEVENT", f"UID:{f['id']}@vuelos-tracker", f"DTSTAMP:{stamp}",
                   f"DTSTART:{dt(f['salida'])}", f"DTEND:{dt(end)}", f"SUMMARY:{ics_escape(title)}",
                   f"LOCATION:{ics_escape(ap_long(o) if o else '')}",
-                  f"DESCRIPTION:{ics_escape(chr(10).join(desc))}", "TRANSP:TRANSPARENT", "END:VEVENT"]
+                  f"DESCRIPTION:{ics_escape(chr(10).join(desc))}",
+                  f"URL:https://www.flightradar24.com/data/aircraft/{f['matricula'].lower()}",
+                  "TRANSP:TRANSPARENT", "END:VEVENT"]
     lines.append("END:VCALENDAR")
     with open(os.path.join(DATA, "vuelos.ics"), "w", encoding="utf-8", newline="") as fh:
         fh.write("\r\n".join(ics_fold(l) for l in lines) + "\r\n")

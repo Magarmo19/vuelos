@@ -2,8 +2,8 @@ name: Rastrear flota
 
 on:
   schedule:
-    - cron: "*/5 * * * *"   # cada 5 min (GitHub a veces lo retrasa)
-  workflow_dispatch: {}       # botón "Run workflow"
+    - cron: "*/5 * * * *"   # respaldo: GitHub lo retrasa mucho (a veces horas)
+  workflow_dispatch: {}       # botón "Run workflow" y cron-job.org cada 2 min (lo que de verdad lo mueve)
   push:
     branches: [main]          # al cambiar asignaciones o la web, se actualiza enseguida
 
@@ -24,7 +24,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Recuperar datos anteriores
         env:
@@ -63,9 +63,27 @@ jobs:
           rm -f _site/data/state.json _site/data/_tracks.json _site/data/*.tmp
           touch _site/.nojekyll
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
+          include-hidden-files: true
 
+      # Publicar la web. Los datos ya están guardados en la rama «datos» y la web los lee de ahí,
+      # así que un fallo puntual de GitHub Pages no se marca como error (no manda emails):
+      # se reintenta una vez y, si sigue fallando, la siguiente pasada publica.
       - id: deploy
-        uses: actions/deploy-pages@v4
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+
+      - name: Esperar antes de reintentar la publicación
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 30
+
+      - id: deploy2
+        if: steps.deploy.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+
+      - name: Aviso si no se pudo publicar
+        if: steps.deploy.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        run: echo "::warning::GitHub Pages no aceptó la publicación (fallo de GitHub). Los datos están guardados; se publicará en la siguiente pasada."
