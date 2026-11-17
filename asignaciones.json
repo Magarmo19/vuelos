@@ -1,6 +1,14 @@
 {
   "etiqueta": "Ella",
-  "asignaciones": [],
+  "asignaciones": [
+    {
+      "matricula": "9H-ILZ",
+      "hex": "4d2110",
+      "desde": "2026-11-17",
+      "hasta": null,
+      "nota": ""
+    }
+  ],
   "incluir_vuelos": [],
   "excluir_vuelos": []
 }
