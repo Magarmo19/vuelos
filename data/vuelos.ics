@@ -1,0 +1,190 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//vuelos-tracker//ES
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:✈️ Vuelos de Ella
+X-WR-TIMEZONE:Europe/Madrid
+REFRESH-INTERVAL;VALUE=DURATION:PT15M
+X-PUBLISHED-TTL:PT15M
+BEGIN:VEVENT
+UID:4d2110-1794896786@vuelos-tracker
+DTSTAMP:20261121T180257Z
+DTSTART:20261117T062626Z
+DTEND:20261117T070933Z
+SUMMARY:✈️ ? → TRN
+LOCATION:
+DESCRIPTION:9H-ILZ · Challenger 850 · VJT683\nSalida: desconocido (hora
+  aprox.)\nLlegada: Turin Airport (LIMF) · Caselle Torinese (TO)\nDuraci
+ ón: 0 h 43 min\nFlightradar24: https://www.flightradar24.com/data/aircra
+ ft/9h-ilz\nADS-B Exchange: https://globe.adsbexchange.com/?icao=4d2110
+URL:https://www.flightradar24.com/data/aircraft/9h-ilz
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:4d2110-1794913288@vuelos-tracker
+DTSTAMP:20261121T180257Z
+DTSTART:20261117T110128Z
+DTEND:20261117T122931Z
+SUMMARY:✈️ TRN → AMS
+LOCATION:Turin Airport (LIMF) · Caselle Torinese (TO)
+DESCRIPTION:9H-ILZ · Challenger 850 · VJT683\nSalida: Turin Airport (LI
+ MF) · Caselle Torinese (TO)\nLlegada: Amsterdam Airport Schiphol (EHAM)\
+ nDuración: 1 h 28 min\nDistancia: 818 km\nFlightradar24: https://www.fli
+ ghtradar24.com/data/aircraft/9h-ilz\nADS-B Exchange: https://globe.adsbex
+ change.com/?icao=4d2110
+URL:https://www.flightradar24.com/data/aircraft/9h-ilz
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:4d2110-1794998440@vuelos-tracker
+DTSTAMP:20261121T180257Z
+DTSTART:20261118T104040Z
+DTEND:20261118T114501Z
+SUMMARY:✈️ AMS → ZRH
+LOCATION:Amsterdam Airport Schiphol (EHAM)
+DESCRIPTION:9H-ILZ · Challenger 850 · VJT683\nSalida: Amsterdam Airport
+  Schiphol (EHAM)\nLlegada: Zürich Airport (LSZH) · Zurich\nDuración: 1
+  h 04 min\nDistancia: 603 km\nFlightradar24: https://www.flightradar24.co
+ m/data/aircraft/9h-ilz\nADS-B Exchange: https://globe.adsbexchange.com/?i
+ cao=4d2110
+URL:https://www.flightradar24.com/data/aircraft/9h-ilz
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:4d2110-1795017714@vuelos-tracker
+DTSTAMP:20261121T180257Z
+DTSTART:20261118T160154Z
+DTEND:20261118T170300Z
+SUMMARY:✈️ ZRH → MST
+LOCATION:Zürich Airport (LSZH) · Zurich
+DESCRIPTION:9H-ILZ · Challenger 850 · VJT683\nSalida: Zürich Airport (
+ LSZH) · Zurich\nLlegada: Maastricht Aachen Airport (EHBK)\nDuración: 1 
+ h 01 min\nDistancia: 434 km\nFlightradar24: https://www.flightradar24.com
+ /data/aircraft/9h-ilz\nADS-B Exchange: https://globe.adsbexchange.com/?ic
+ ao=4d2110
+URL:https://www.flightradar24.com/data/aircraft/9h-ilz
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:4d2110-1795026726@vuelos-tracker
+DTSTAMP:20261121T180257Z
+DTSTART:20261118T183206Z
+DTEND:20261118T200357Z
+SUMMARY:✈️ MST → ? (sin señal)
+LOCATION:Maastricht Aachen Airport (EHBK)
+DESCRIPTION:9H-ILZ · Challenger 850 · VJT705X\nSalida: Maastricht Aache
+ n Airport (EHBK)\nLlegada: — (aprox.)\nDuración: 1 h 32 min\nFlightrad
+ ar24: https://www.flightradar24.com/data/aircraft/9h-ilz\nADS-B Exchange:
+  https://globe.adsbexchange.com/?icao=4d2110
+URL:https://www.flightradar24.com/data/aircraft/9h-ilz
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:4d2110-1795087450@vuelos-tracker
+DTSTAMP:20261121T180257Z
+DTSTART:20261119T112410Z
+DTEND:20261119T141712Z
+SUMMARY:✈️ ? → LBG
+LOCATION:
+DESCRIPTION:9H-ILZ · Challenger 850 · VJT683\nSalida: desconocido (hora
+  aprox.)\nLlegada: Paris-Le Bourget International Airport (LFPB) (aprox.)
+ \nDuración: 2 h 53 min\nFlightradar24: https://www.flightradar24.com/dat
+ a/aircraft/9h-ilz\nADS-B Exchange: https://globe.adsbexchange.com/?icao=4
+ d2110
+URL:https://www.flightradar24.com/data/aircraft/9h-ilz
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:4d2110-1795102777@vuelos-tracker
+DTSTAMP:20261121T180257Z
+DTSTART:20261119T153937Z
+DTEND:20261119T181137Z
+SUMMARY:✈️ LBG → AXD
+LOCATION:Paris-Le Bourget International Airport (LFPB)
+DESCRIPTION:9H-ILZ · Challenger 850 · VJT683\nSalida: Paris-Le Bourget 
+ International Airport (LFPB)\nLlegada: Alexandroupoli Democritus Airport 
+ (LGAL) · Alexandroupolis\nDuración: 2 h 32 min\nDistancia: 2048 km\nFli
+ ghtradar24: https://www.flightradar24.com/data/aircraft/9h-ilz\nADS-B Exc
+ hange: https://globe.adsbexchange.com/?icao=4d2110
+URL:https://www.flightradar24.com/data/aircraft/9h-ilz
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:4d2110-1795111957@vuelos-tracker
+DTSTAMP:20261121T180257Z
+DTSTART:20261119T181237Z
+DTEND:20261119T184340Z
+SUMMARY:✈️ ? → ISL
+LOCATION:
+DESCRIPTION:9H-ILZ · Challenger 850 · VJT683\nSalida: desconocido (hora
+  aprox.)\nLlegada: İstanbul Atatürk Airport (LTBA) · Istanbul(Bakırk
+ öy)\nDuración: 0 h 31 min\nFlightradar24: https://www.flightradar24.com
+ /data/aircraft/9h-ilz\nADS-B Exchange: https://globe.adsbexchange.com/?ic
+ ao=4d2110
+URL:https://www.flightradar24.com/data/aircraft/9h-ilz
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:4d2110-1795171241@vuelos-tracker
+DTSTAMP:20261121T180257Z
+DTSTART:20261120T104041Z
+DTEND:20261120T113906Z
+SUMMARY:✈️ ISL → SOF
+LOCATION:İstanbul Atatürk Airport (LTBA) · Istanbul(Bakırköy)
+DESCRIPTION:9H-ILZ · Challenger 850 · VJT683\nSalida: İstanbul Atatür
+ k Airport (LTBA) · Istanbul(Bakırköy)\nLlegada: Sofia Airport (LBSF) (
+ aprox.)\nDuración: 0 h 58 min\nDistancia: 487 km\nFlightradar24: https:/
+ /www.flightradar24.com/data/aircraft/9h-ilz\nADS-B Exchange: https://glob
+ e.adsbexchange.com/?icao=4d2110
+URL:https://www.flightradar24.com/data/aircraft/9h-ilz
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:4d2110-1795183855@vuelos-tracker
+DTSTAMP:20261121T180257Z
+DTSTART:20261120T141055Z
+DTEND:20261120T155240Z
+SUMMARY:✈️ SOF → GRS
+LOCATION:Sofia Airport (LBSF)
+DESCRIPTION:9H-ILZ · Challenger 850 · VJT683\nSalida: Sofia Airport (LB
+ SF)\nLlegada: Grosseto Corrado Baccarini Air Base / Grosseto Airport (LIR
+ S) · Grosseto (GR) (aprox.)\nDuración: 1 h 42 min\nDistancia: 1008 km\n
+ Flightradar24: https://www.flightradar24.com/data/aircraft/9h-ilz\nADS-B 
+ Exchange: https://globe.adsbexchange.com/?icao=4d2110
+URL:https://www.flightradar24.com/data/aircraft/9h-ilz
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:4d2110-1795265490@vuelos-tracker
+DTSTAMP:20261121T180257Z
+DTSTART:20261121T125130Z
+DTEND:20261121T131720Z
+SUMMARY:✈️ GRS → PSA
+LOCATION:Grosseto Corrado Baccarini Air Base / Grosseto Airport (LIRS) ·
+  Grosseto (GR)
+DESCRIPTION:9H-ILZ · Challenger 850 · VJT683\nSalida: Grosseto Corrado 
+ Baccarini Air Base / Grosseto Airport (LIRS) · Grosseto (GR)\nLlegada: P
+ isa International Airport (LIRP) · Pisa (PI) (aprox.)\nDuración: 0 h 26
+  min\nDistancia: 117 km\nFlightradar24: https://www.flightradar24.com/dat
+ a/aircraft/9h-ilz\nADS-B Exchange: https://globe.adsbexchange.com/?icao=4
+ d2110
+URL:https://www.flightradar24.com/data/aircraft/9h-ilz
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:4d2110-1795272857@vuelos-tracker
+DTSTAMP:20261121T180257Z
+DTSTART:20261121T145417Z
+DTEND:20261121T165138Z
+SUMMARY:✈️ PSA → RTM
+LOCATION:Pisa International Airport (LIRP) · Pisa (PI)
+DESCRIPTION:9H-ILZ · Challenger 850 · VJT683\nSalida: Pisa Internationa
+ l Airport (LIRP) · Pisa (PI)\nLlegada: Rotterdam The Hague Airport (EHRD
+ )\nDuración: 1 h 57 min\nDistancia: 1021 km\nFlightradar24: https://www.
+ flightradar24.com/data/aircraft/9h-ilz\nADS-B Exchange: https://globe.ads
+ bexchange.com/?icao=4d2110
+URL:https://www.flightradar24.com/data/aircraft/9h-ilz
+TRANSP:TRANSPARENT
+END:VEVENT
+END:VCALENDAR
